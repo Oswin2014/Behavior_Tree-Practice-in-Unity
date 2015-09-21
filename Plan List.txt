@@ -1,0 +1,358 @@
+
+--battle and behaviour tree-----------------------------
+>>behaviour tree base knowledge understand							-OVER
+https://en.wikipedia.org/wiki/Behavior_Trees
+https://en.wikipedia.org/wiki/Behavior_Trees_(artificial_intelligence,_robotics_and_control)
+http://blog.csdn.net/kenkao/article/details/6099966
+http://blog.csdn.net/fg5823820/article/details/8750606
+http://www.gamasutra.com/blogs/ChrisSimpson/20140717/221339/Behavior_trees_for_AI_How_they_work.php
+
+Behavior Tree bookmark:
+https://en.wikipedia.org/wiki/Behavior_Trees
+https://en.wikipedia.org/wiki/Behavior_Trees_(artificial_intelligence,_robotics_and_control)
+http://blog.csdn.net/fg5823820/article/details/8750606
+http://blog.csdn.net/kenkao/article/details/6099966
+http://www.gamasutra.com/blogs/ChrisSimpson/20140717/221339/Behavior_trees_for_AI_How_they_work.php
+http://www.luzexi.com/unity3d%E8%A1%8C%E4%B8%BA%E6%A0%91%E7%B3%BB%E7%BB%9F%E7%BC%96%E7%A8%8B%E5%AE%9E%E7%8E%B0/
+http://code.csdn.net/news/2824449
+http://twvideo01.ubm-us.net/o1/vault/gdc10/slides/ChampandardDaweHernandezCerpa_BehaviorTrees.pdf
+http://magicscrollsofcode.blogspot.com/2010/12/behavior-trees-by-example-ai-in-android.html
+http://gamedev.stackexchange.com/questions/51693/decision-tree-vs-behavior-tree
+http://guineashots.com/2014/07/25/an-introduction-to-behavior-trees-part-1/
+http://aigamedev.com/open/article/bt-overview/
+http://obviam.net/index.php/game-ai-an-introduction-to-behavior-trees/
+http://aisharing.blogcn.com/archives/tag/behavior-tree
+http://www.unity.5helpyou.com/3359.html
+http://www.ispinel.com/2015/04/25/12466/
+http://code.google.com/p/daggame/source/browse/#svn/trunk/Code/src/com/game/AI
+
+
+>>Behavior sample understand                                        -||||||
+--TencentOpen/behaviac(integation)                                  -Almost
+--luzexi/Unity3DAIBehaviorTree(small part)                          -Almost
+--match-rv(easy)                                                    -Almost
+--暗黑战神(confuse)
+
+>>how to config/edit behavior logic
+
+>>battle mode understand and summarize                              -||||||
+--match-rv
+--card2
+--暗黑战神
+--net sample project
+>>project design
+--ask for document
+>>Practice
+>>Summarize
+
+
+>>behaviour tree base knowledge understand
+
+switchings between a finite set of tasks in a modular fashion
+create very complex tasks composed of simple tasks
+BTs present some similarities to hierarchical state machines with the key difference that the main building block of a behavior is a task rather than a state
+
+>Control flow node
+control the subtasks of which it is composed
+selector (fallback) node / sequence node
+
+>Selector (fallback) node
+find and execute the first child that does not fail
+
+>Sequence node
+find and execute the first child that has not yet succeeded
+
+>Behavior tree notation
+A behavior tree is used to formally represent the fragment of behavior in each individual requirement
+The Behavior Tree Notation captures these composed component-states in a simple tree-like form
+
+
+----------Behavior trees for AI: How they work---------------
+>>Basics
+allowing for the AI to have fallback tactics should a particular behaviour fail
+
+>>Data Driven vs Code Driven
+A main distinction is whether the trees are defined externally to the codebase, perhaps in XML or a proprietary format and manipulated with an external editor, or whether the structure of the trees is defined directly in code via nested class instances.
+
+>>Tree Traversal
+a particular node or branch in the tree may take many ticks of the game to complete
+In the basic implementation of behaviour trees, the system will traverse down from the root of the tree every single frame, testing each node down the tree to see which is active, rechecking any nodes along the way, until it reaches the currently active node to tick it again.
+its a must that any behaviour tree you implement should store any currently processing nodes so they can be ticked directly within the behaviour tree engine rather than per tick traversal of the entire tree.
+
+>>Flow
+--three common statuses:
+Success
+Failure
+Running
+
+--three main archetypes of behaviour tree node:
+--Composite
+--Decorator
+----Unlike a composite node, they can specifically only have a single child
+----Their function is either to transform the result they receive from their child node's status, to terminate the child, or repeat processing of the child, depending on the type of decorator node.
+----A commonly used example of a decorator is the Inverter, which will simply invert the result of the child
+--Leaf
+call Leaf pass parameters / share context variables with next leaf node or other behavior tree 
+
+>>Composite Nodes
+--Random Selectors / Sequences
+the child nodes are processed is determined randomly
+used to add more unpredictability to an AI character in cases where there 
+isn’t a clear preferable order of execution of possible courses of action
+
+>>Decorator Nodes
+--Succeeder
+where a failure is expected or anticipated
+but you don’t want to abandon processing of a sequence that branch sits on
+
+--Repeater
+Repeaters may optionally run their children a set number of times before returning to their parent
+
+>>Data Context
+a storage for arbitrary variables that are interpreted and altered by the nodes 
+(using string/object pair in a C# Dictionary or java HashMap, probably a C++ string/void* STL map)
+
+>>Defining Leaf Nodes
+
+--most systems have two functions that will need to be implemented
+init - Called the first time a node is visited by its parent during its parents execution
+process - This is called every tick of the behaviour tree while the node is processing
+
+>>Behavior sample understand------------------------
+
+>TencentOpen/behaviac
+--Behavior Tree
+
+abstract BehaviorNode
+{
+	CreateAndInitTask()
+	Attach()
+	AddChild()
+	createTask()
+	
+	List<BehaviorNode> m_attachments
+	BehaviorNode m_parent
+	List<BehaviorNode> m_children
+}
+
+abstract DecoratorNode
+
+BehaviorTree : BehaviorNode
+{
+	createTask()
+}
+
+abstract BehaviorTask
+{
+	Init()
+	Clear()
+	FreeAttachments()
+	exec()
+	update()
+	
+	Attach()
+	
+	GetStatus()
+	SetStatus()
+	
+	SetCurrentTask(BehaviorTask node)
+	GetCurrentTask()
+	
+	BehaviorNode m_node
+	BranchTask m_parent
+	List<AttachmentTask> m_attachments
+}
+
+do: BehaviorTask.exec()
+GameLevelCommon.Update() / GameLevelCommon.Update() -> Player.tick()
+->btexec()
+->Agent.btexec_()
+->BehaviorTask.exec()
+
+AttachmentTask : BehaviorTask
+{
+	Init(BehaviorNode node)
+	traverse(NodeHandler_t handler, Agent pAgent, object user_data)
+}
+
+LeafTask : BehaviorTask
+{
+	Init(BehaviorNode node)
+	traverse(NodeHandler_t handler, Agent pAgent, object user_data)
+}
+
+BranchTask : BehaviorTask
+{
+	SetCurrentTask(BehaviorTask node)
+	GetCurrentTask()
+	
+	EBTStatus tickCurrentNode(Agent pAgent)
+	EBTStatus update(Agent pAgent, EBTStatus childStatus)
+	
+	BehaviorTask m_currentTask
+}
+
+CompositeTask : BranchTask
+{
+	traverse(NodeHandler_t handler, Agent pAgent, object user_data)
+	
+	Init(BehaviorNode node)
+	addChild(BehaviorTask pBehavior)
+	
+	List<BehaviorTask> m_children = new List<BehaviorTask>()
+	
+	m_activeChildIndex = InvalidChildIndex
+}
+
+SingeChildTask : BranchTask
+{
+	traverse(NodeHandler_t handler, Agent pAgent, object user_data)
+	
+	Init(BehaviorNode node)
+	EBTStatus update(Agent pAgent, EBTStatus childStatus)
+	
+	addChild(BehaviorTask pBehavior)
+	BehaviorTask m_root
+}
+
+abstract class DecoratorTask : SingeChildTask
+{
+	Init(BehaviorNode node)
+	
+	EBTStatus update(Agent pAgent, EBTStatus childStatus)
+}
+
+BehaviorTreeTask : SingeChildTask
+{
+	
+}
+---------------------------------------------------
+
+>luzexi/Unity3DAIBehaviorTree(small part)
+
+BNode
+{
+	BNode m_cParent
+	List<BNode> m_lstChildren = new List<BNode>()
+
+	ActionResult RunNode(BInput input)
+	
+	virtual void OnEnter(BInput input)
+	virtual ActionResult Excute(BInput input)
+	virtual void OnExit(BInput input)
+	
+	RemoveChild( BNode node )
+	AddChild( BNode node )
+	InsertChild( BNode prenode , BNode node )
+	ReplaceChild( BNode prenode , BNode node )
+	ContainChild(BNode node)
+}
+
+BNodeAction : BNode
+
+BNodeComposite : BNode
+
+BNodeCondition : BNode
+
+BNodeDecorator : BNode
+
+BTree
+{
+	BNode m_cRoot
+	
+	SetRoot( BNode node )
+	Clear()
+	Run( BInput input )
+}
+
+BTreeMgr
+{
+	Dictionary<string,BTree> m_mapTree
+	BTree GetTree( string name )
+	List<BTree> GetTrees()
+	
+	Add( BTree tree )
+	Remove(BTree tree)
+}
+
+----------------------------------------------
+>match-rv
+
+BTTree
+{
+	GenericGameModelController myController
+	
+	BTNode _root
+	bool isRunning
+	
+	initWithControll()
+	run()
+	Clone()
+}
+do: 
+->GenericGameModelRender.FixedUpdate()
+->gameController.checkEveryTick()
+->Controller.updateAI()
+->BTTree.run()
+
+AIConfigManager
+{
+	Dictionary<string, BTTree> btTreeTemplate
+	
+	BTTree getBTTree(string aiName)
+	BTTree getAIConfFromFile(string aiName)
+}
+
+BTNode
+{
+	GenericGameModelController _controller
+	List<BTNode> _children
+	BTPrecondition precondition
+	
+	float interval
+	float _lastTimeEvaluated
+	bool activated
+	
+	setController(GenericGameModelController controller)
+	Activate()
+	
+	Evaluate()
+	DoEvaluate()
+	BTResult Tick()
+	Clear()
+	
+	AddChild()
+	RemoveChild()
+	
+	CheckTimer()
+	
+	Clone()
+}
+
+BTAction : BTNode
+
+BTParallel : BTNode
+
+BTPrecondition : BTNode
+
+BTPrioritySelector : BTNode
+
+BTSequence : BTNode
+
+
+
+{
+	
+}
+
+
+
+---------------------------------------------------
+
+>>project design-------------------------------------
+
+--avatar attack(龙影分身)
+--teleport(瞬移)
+--scene with black fog
+
+-----------------------------------------
