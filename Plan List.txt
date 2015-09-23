@@ -169,6 +169,10 @@ GameLevelCommon.Update() / GameLevelCommon.Update() -> Player.tick()
 ->Agent.btexec_()
 ->BehaviorTask.exec()
 
+>>understand BehaviorTask.exec()
+
+
+
 AttachmentTask : BehaviorTask
 {
 	Init(BehaviorNode node)
@@ -226,6 +230,155 @@ BehaviorTreeTask : SingeChildTask
 {
 	
 }
+
+
+Agent
+{
+		class State_t
+		{
+			Variables Vars
+			BehaviorTreeTask BT
+		}
+	
+		class BehaviorTreeStackItem_t
+		{
+			public BehaviorTreeTask	bt;
+			public TriggerMode triggerMode;
+			public bool triggerByEvent;
+		}
+		
+		static Dictionary<string, Agent> ms_agents
+		List<BehaviorTreeTask> BehaviorTreeTasks
+		List<BehaviorTreeStackItem_t> BTStack
+		BehaviorTreeTask m_currentBT;
+	
+        bool m_bActive = true;
+
+		bool m_referencetree = false;
+        Variables Variables
+        static int ms_agent_index;
+        static Dictionary<string, int> ms_agent_type_index;
+	
+		Init_(int contextId, Agent pAgent, int priority, string agentInstanceName)
+		{
+			set m_contextId, m_id, m_priority
+			GetContext()
+			pWorldPtr = GetWorld()
+			pWorldPtr.AddAgent(pAgent);
+		}
+		
+		Agent GetAgent(string agentName)
+		void OnDestroy()
+		
+		void btresetcurrrent()
+		void btsetcurrent(string relativePath)
+		btreferencetree(string relativePath)
+		bteventtree(string relativePath, TriggerMode triggerMode)
+		
+		EBTStatus btexec_()
+		virtual EBTStatus btexec()
+		
+		void btonevent(string btEvent)
+		
+		BehaviorTreeTask btgetcurrent()
+		bool btload(string relativePath, bool bForce /*= false*/)
+		void btunload(string relativePath)
+		void btunloadall()
+}
+
+Context
+{
+	Dictionary<int, Context> ms_contexts
+	Dictionary<string, Agent> m_namedAgents
+	Dictionary<string, Variables> m_static_variables
+	Dictionary<string, Dictionary<CStringID, CNamedEvent>> ms_eventInfosGlobal
+	
+    int m_context_id;
+    World m_world;
+
+	Context GetContext(int contextId)
+	Cleanup(int contextId)
+	SetWorld(World pWorld)
+	GetWorld(bool bCreate)
+	CleanupStaticVariables()
+	ResetChangedVariables()
+	SetStaticVariable<VariableType>(CMemberBase pMember, string variableName, VariableType value, string staticClassName, uint variableId)
+	FindEventStatic(string eventName, string className)
+	InsertEventGlobal(string className, CNamedEvent pEvent)
+	CNamedEvent FindNamedEventTemplate(List<CMethodBase> methods, string eventName)
+	BindInstance(Agent pAgentInstance, string agentInstanceName)
+	UnbindInstance(string agentInstanceName)
+	GetInstance(string agentInstanceName)
+}
+
+
+class World : Agent
+{
+	List<HeapItem_t> Agents
+	bool m_bTickAgents;
+	
+	EBTStatus btexec()
+	void btexec_agents()
+}
+
+class GameActor : behaviac.Agent
+{
+	
+}
+
+Player : GameActor 
+{
+	bool init()
+	{
+		btloadResult = btload(behaviorTree, true);
+        if(btloadResult)
+            btsetcurrent(behaviorTree);
+	}
+	
+	void tick()
+	{
+		if(btloadResult && aiEnabled)
+			btexec();
+	}
+}
+
+class GameLevelCommon : behaviac.Agent 
+{
+	void Awake()
+	{
+		BehaviacSystem.init();
+		behaviac.Agent.BindInstance (GameLevelCommon.instance, "GameLevel");
+		
+		playerChar = playerObject.GetComponent<Player>();
+		playerChar.init();
+		
+		btloadResult = btload(behaviorTree, true);
+        if(btloadResult)
+            btsetcurrent(behaviorTree);
+	}
+	
+	void Update()
+	{
+		if(btloadResult)
+			(Agent.)btexec();
+
+		//< tick player
+		if(playerChar != null)
+			playerChar.tick();
+		
+		//< tick enemies
+		for(int i = 0; i < enemyList.Count; ++i)
+		{
+			Player p_ = enemyList[i] as Player;
+			if(p_ != null)
+			{
+				p_.tick();
+			}
+		}
+	}
+}
+
+
 ---------------------------------------------------
 
 >luzexi/Unity3DAIBehaviorTree(small part)
