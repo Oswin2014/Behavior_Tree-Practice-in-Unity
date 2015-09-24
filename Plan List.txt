@@ -158,6 +158,8 @@ abstract BehaviorTask
 	SetCurrentTask(BehaviorTask node)
 	GetCurrentTask()
 	
+	virtual bool onevent(Agent pAgent, string eventName)
+	
 	BehaviorNode m_node
 	BranchTask m_parent
 	List<AttachmentTask> m_attachments
@@ -171,6 +173,11 @@ GameLevelCommon.Update() / GameLevelCommon.Update() -> Player.tick()
 
 >>understand BehaviorTask.exec()
 
+do: BehaviorTask.onevent()
+Agent.FireEvent()
+->CNamedEvent.SetFired()
+->Agent.btonevent()
+->BehaviorTask.onevent()
 
 
 AttachmentTask : BehaviorTask
@@ -379,9 +386,27 @@ class GameLevelCommon : behaviac.Agent
 }
 
 
+Event
+{
+	任何一个BT都可以作为事件子树(直接附加到某树节点中), 发生了某个事件, 通过Agent.FireEvent()触发m_currentBT.onevent()
+}
+
+Predicate
+{
+	执行相应事件的附加先决条件
+}
+
+Action
+{
+	挂事件
+}
+
+
+
 ---------------------------------------------------
 
 >luzexi/Unity3DAIBehaviorTree(small part)
+{
 
 BNode
 {
@@ -427,9 +452,11 @@ BTreeMgr
 	Add( BTree tree )
 	Remove(BTree tree)
 }
+}
 
 ----------------------------------------------
 >match-rv
+{
 
 BTTree
 {
@@ -492,6 +519,7 @@ BTPrioritySelector : BTNode
 
 BTSequence : BTNode
 
+}
 
 
 {
@@ -502,10 +530,20 @@ BTSequence : BTNode
 
 ---------------------------------------------------
 
+>>according to TencentOpen/behaviac implement self Behavior Tree System-----------
+
+>understand all node
+>design BT
+>decide behavior node
+>implement load xml
+
+
 >>project design-------------------------------------
 
 --avatar attack(龙影分身)
 --teleport(瞬移)
 --scene with black fog
+ 
+
 
 -----------------------------------------

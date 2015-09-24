@@ -6,6 +6,9 @@ using System.Collections;
 public class GameActor : behavior.Agent
 {
 
+    public bool aiEnabled = true;
+
+
     // Use this for initialization
     void Start()
     {

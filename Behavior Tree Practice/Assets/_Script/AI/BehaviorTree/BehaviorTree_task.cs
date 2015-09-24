@@ -16,6 +16,18 @@ namespace behavior
         BT_RUNNING,
     }
 
+    /**
+    trigger mode to control the bt switching and back
+    */
+    public enum TriggerMode
+    {
+        TM_Transfer,
+        TM_Return
+    }
+
+    ///return false to stop traversing
+    public delegate bool NodeHandler_t(BehaviorTask task, Agent agent, object user_data);
+
     public abstract class BehaviorTask
     {
 
@@ -23,6 +35,11 @@ namespace behavior
         protected BehaviorNode m_node;
         protected BranchTask m_parent;
         protected List<AttachmentTask> m_attachments;
+
+
+        static NodeHandler_t abort_handler_ = abort_handler;
+        static NodeHandler_t reset_handler_ = reset_handler;
+
 
         public virtual void Init(BehaviorNode node)
         {
@@ -266,6 +283,46 @@ namespace behavior
 
         }
 
+        public void abort(Agent pAgent)
+        {
+            this.traverse(abort_handler_, pAgent, null);
+        }
+
+        ///reset the status to invalid
+        public void reset(Agent pAgent)
+        {
+            //BEHAVIAC_PROFILE("BehaviorTask.reset");
+
+            this.traverse(reset_handler_, pAgent, null);
+        }
+
+        static bool abort_handler(BehaviorTask node, Agent pAgent, object user_data)
+        {
+            if (node.m_status == EBTStatus.BT_RUNNING)
+            {
+                node.onexit_action(pAgent, EBTStatus.BT_FAILURE);
+
+                node.m_status = EBTStatus.BT_FAILURE;
+
+                node.SetCurrentTask(null);
+            }
+
+            return true;
+        }
+
+        static bool reset_handler(BehaviorTask node, Agent pAgent, object user_data)
+        {
+            node.m_status = EBTStatus.BT_INVALID;
+
+            node.SetCurrentTask(null);
+            //node->SetReturnStatus(BT_INVALID);
+            //BEHAVIAC_ASSERT(node->GetReturnStatus() == BT_INVALID);
+
+            //node.onreset(pAgent);
+
+            return true;
+        }
+
         public virtual void SetReturnStatus(EBTStatus status)
         {
         }
@@ -284,6 +341,8 @@ namespace behavior
         {
         }
 
+        public abstract void traverse(NodeHandler_t handler, Agent pAgent, object user_data);
+
         // isContinueTicking
         protected virtual EBTStatus update(Agent pAgent, EBTStatus childStatus)
         {
@@ -297,6 +356,10 @@ namespace behavior
     public class AttachmentTask : BehaviorTask
     {
 
+        public override void traverse(NodeHandler_t handler, Agent pAgent, object user_data)
+        {
+            handler(this, pAgent, user_data);
+        }
     }
 
     // ============================================================================
@@ -304,12 +367,22 @@ namespace behavior
     public class LeafTask : BehaviorTask
     {
 
+        public override void traverse(NodeHandler_t handler, Agent pAgent, object user_data)
+        {
+            handler(this, pAgent, user_data);
+        }
+
     }
 
     // ============================================================================
 
     public abstract class BranchTask : BehaviorTask
     {
+        //bookmark the current ticking node, it is different from m_activeChildIndex
+        protected BehaviorTask m_currentTask;
+        protected EBTStatus m_returnStatus;
+
+
         protected abstract void addChild(BehaviorTask pBehavior);
 
         public BehaviorTask GetCurrentTask()
@@ -396,15 +469,19 @@ namespace behavior
             return status;
         }
 
-        //bookmark the current ticking node, it is different from m_activeChildIndex
-        protected BehaviorTask m_currentTask;
-        protected EBTStatus m_returnStatus;
     }
 
     // ============================================================================
 
     public class CompositeTask : BranchTask
     {
+
+        protected List<BehaviorTask> m_children = new List<BehaviorTask>();
+
+        //book mark the current child
+        protected int m_activeChildIndex = InvalidChildIndex;
+        protected const int InvalidChildIndex = -1;
+
 
         protected CompositeTask()
         {
@@ -438,17 +515,28 @@ namespace behavior
             this.m_children.Add(pBehavior);
         }
 
-        protected List<BehaviorTask> m_children = new List<BehaviorTask>();
+        public override void traverse(NodeHandler_t handler, Agent pAgent, object user_data)
+        {
+            if (handler(this, pAgent, user_data))
+            {
+                for (int i = 0; i < this.m_children.Count; ++i)
+                {
+                    BehaviorTask task = this.m_children[i];
+                    task.traverse(handler, pAgent, user_data);
+                }
+            }
+        }
 
-        //book mark the current child
-        protected int m_activeChildIndex = InvalidChildIndex;
-        protected const int InvalidChildIndex = -1;
     }
 
     // ============================================================================
 
     public class SingeChildTask : BranchTask
     {
+
+        protected BehaviorTask m_root;
+
+
         protected SingeChildTask()
         {
             m_root = null;
@@ -486,6 +574,17 @@ namespace behavior
             this.m_root = pBehavior;
         }
 
+        public override void traverse(NodeHandler_t handler, Agent pAgent, object user_data)
+        {
+            if (handler(this, pAgent, user_data))
+            {
+                if (this.m_root != null)
+                {
+                    this.m_root.traverse(handler, pAgent, user_data);
+                }
+            }
+        }
+
         protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
         {
             if (this.m_currentTask != null)
@@ -505,8 +604,6 @@ namespace behavior
         }
 
 
-
-        protected BehaviorTask m_root;
     }
 
     // ============================================================================
@@ -594,6 +691,17 @@ namespace behavior
             }
 
             return false;
+        }
+
+        /**
+        return the path relative to the workspace path
+        */
+        public string GetName()
+        {
+            Debug.Check(this.m_node is BehaviorTree);
+            BehaviorTree bt = this.m_node as BehaviorTree;
+            Debug.Check(bt != null);
+            return bt.GetName();
         }
 
 
