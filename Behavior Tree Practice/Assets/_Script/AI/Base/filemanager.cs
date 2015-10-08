@@ -3,7 +3,7 @@ using UnityEngine;
 using System.Diagnostics;
 using System.IO;
 
-namespace behavior
+namespace behaviac
 {
     
     public class FileManager
@@ -99,7 +99,7 @@ namespace behavior
             catch
             {
                 string msg = string.Format("FileManager::FileOpen exception:'{0}'", filePath);
-                behavior.Debug.LogWarning(msg);
+                behaviac.Debug.LogWarning(msg);
             }
 
             return null;

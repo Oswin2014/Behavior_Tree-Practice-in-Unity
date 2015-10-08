@@ -1,4 +1,4 @@
-
+ï»¿
 --battle and behaviour tree-----------------------------
 >>behaviour tree base knowledge understand							-OVER
 https://en.wikipedia.org/wiki/Behavior_Trees
@@ -31,14 +31,14 @@ http://code.google.com/p/daggame/source/browse/#svn/trunk/Code/src/com/game/AI
 --TencentOpen/behaviac(integation)                                  -Almost
 --luzexi/Unity3DAIBehaviorTree(small part)                          -Almost
 --match-rv(easy)                                                    -Almost
---°µºÚÕ½Éñ(confuse)
+--æš—é»‘æˆ˜ç¥ž(confuse)
 
 >>how to config/edit behavior logic
 
 >>battle mode understand and summarize                              -||||||
 --match-rv
 --card2
---°µºÚÕ½Éñ
+--æš—é»‘æˆ˜ç¥ž
 --net sample project
 >>project design
 --ask for document
@@ -98,12 +98,12 @@ call Leaf pass parameters / share context variables with next leaf node or other
 --Random Selectors / Sequences
 the child nodes are processed is determined randomly
 used to add more unpredictability to an AI character in cases where there 
-isn¡¯t a clear preferable order of execution of possible courses of action
+isnâ€™t a clear preferable order of execution of possible courses of action
 
 >>Decorator Nodes
 --Succeeder
 where a failure is expected or anticipated
-but you don¡¯t want to abandon processing of a sequence that branch sits on
+but you donâ€™t want to abandon processing of a sequence that branch sits on
 
 --Repeater
 Repeaters may optionally run their children a set number of times before returning to their parent
@@ -385,20 +385,137 @@ class GameLevelCommon : behaviac.Agent
 	}
 }
 
+-----------------------------------------
+
+do Workspace.RegisterMetas()	//initialize CMemberBase, CMethodBase, CNamedEvent
+BehaviacSystem.init ()
+->Workspace.SetWorkspaceSettings (btExportPath, btFileFormat);
+->Workspace.RegisterMetas()
+->Workspace.RegisterMetas(Assembly a)
+{ init: List<TypeInfo_t> Workspace.ms_agentTypes }
+->Workspace.RegisterType(Type type, bool bIsAgentType)
+{
+	init: Dictionary<CStringID, CTagObjectDescriptor> Metas
+	Agent.CTagObjectDescriptor objectDesc	//Metas.values
+	init: List<CMemberBase> objectDesc.ms_members
+	init: List<CMethodBase> objectDesc.ms_methods
+}
+
+-----------------------------------------
+
+-----------------------------------------
+
+do: load method
+BehaviorNode.load(int version, string agentType, List<property_t> properties)
+->Action.LoadMethod(string value_)
+{
+	CMethodBase method = Agent.CreateMethod(agentClassId, methodId)
+	{
+		Agent.FindMethodBase(agentClassId, methodClassId)
+		{
+			CTagObjectDescriptor pObejctDesc = Metas[agentClassId];
+			CMethodBase pMethod = pObejctDesc.ms_methods[i];
+		}
+	}
+	paramsTokens = ParseForParams(text);
+	method.Load(paramsTokens);
+}
+->CMethodBase.Load(List<string> paramsToken)
+{
+	this.m_params = LoadParams(paramsToken, this.ParamTypes, this.m_param_default_values);
+}
+->CMethodBase.LoadParams(List<string> paramsToken, List<Type> parameters, object[] _param_values)
+{
+	if paramsToken[i][0] == '{'	//struct type
+		StringUtils.ParseForStruct(paramType, paramsToken[i], ref strT, props)
+		object paramValue = StringUtils.FromString(paramType, strT, false)
+	else if paramsToken[i][0] == '"' || paramsToken[i].IndexOf(' ') == -1	//string || value(e.g. 10)
+		object paramValue = StringUtils.FromString(paramType, paramStr, false)
+	else
+		ParseMethodParamProperty(paramsToken[i], _params, i)
+}
+->MethodBase.ParseMethodParamProperty(string paramToken, Param_t[] _params, int i)
+->Condition.ParseProperty(paramToken, ref typeName)
+->Property.Create(string typeName, string variableName, string value, bool bStatic, bool bConst)
+{
+	get propertyName
+	ms_properties.ContainsKey(pPropertyName) / Property.create()
+    Property pO = pProperty.clone();
+	has value: setDefaultValue
+}
+
+-----------------------------------------
+
+class GameLevelCommon : behaviac.Agent 
+{
+	behaviac.MethodMetaInfoAttribute descAttrbute_
+	System.Reflection.MethodBase method_;
+	
+	string m_instanceName;
+	string m_variableName;
+	
+	int ParamsCount	
+	List<Type> ParamTypes
+	
+	CMethodBase(System.Reflection.MethodBase m, behaviac.MethodMetaInfoAttribute a, string methodNameOverride)
+	
+	Agent GetParentAgent(Agent pAgent)	
+	Param_t[] LoadParams(List<string> paramsToken, List<Type> parameters, object[] _param_values)
+	Load(List<string> paramsToken)
+	
+	struct Param_t
+	{
+		bool isRefOut;
+		Property paramProperty;
+		Dictionary<string, Property> paramStructMembers;
+	}
+	
+	GetParamsValue(Agent pAgent, object[] param_values, bool bAllowNullValue)
+	object run(Agent parent, Agent pSelf, object[] param_values)
+	
+	object Invoke(Agent pAgent)
+}
+
+-----------------------------------------
+
+data store:
+//all agent type
+class TypeInfo_t
+{
+    public Type type;
+    public bool bIsInherited;
+}
+Workspace: private static List<TypeInfo_t> ms_agentTypes
+
+
+public class CTagObjectDescriptor
+{
+	List<CMemberBase> ms_members
+	List<CMethodBase> ms_methods
+	
+    public Type type;
+    public string displayName;
+    public string desc;
+    public CTagObjectDescriptor m_parent = null;
+}
+//this agent members and methods, events class data
+Agent: static Dictionary<CStringID, CTagObjectDescriptor> Metas
+
+-----------------------------------------
 
 Event
 {
-	ÈÎºÎÒ»¸öBT¶¼¿ÉÒÔ×÷ÎªÊÂ¼þ×ÓÊ÷(Ö±½Ó¸½¼Óµ½Ä³Ê÷½ÚµãÖÐ), ·¢ÉúÁËÄ³¸öÊÂ¼þ, Í¨¹ýAgent.FireEvent()´¥·¢m_currentBT.onevent()
+	ä»»ä½•ä¸€ä¸ªBTéƒ½å¯ä»¥ä½œä¸ºäº‹ä»¶å­æ ‘(ç›´æŽ¥é™„åŠ åˆ°æŸæ ‘èŠ‚ç‚¹ä¸­), å‘ç”Ÿäº†æŸä¸ªäº‹ä»¶, é€šè¿‡Agent.FireEvent()è§¦å‘m_currentBT.onevent()
 }
 
 Predicate
 {
-	Ö´ÐÐÏàÓ¦ÊÂ¼þµÄ¸½¼ÓÏÈ¾öÌõ¼þ
+	æ‰§è¡Œç›¸åº”äº‹ä»¶çš„é™„åŠ å…ˆå†³æ¡ä»¶
 }
 
 Action
 {
-	¹ÒÊÂ¼þ
+	æŒ‚äº‹ä»¶
 }
 
 
@@ -540,8 +657,8 @@ BTSequence : BTNode
 
 >>project design-------------------------------------
 
---avatar attack(ÁúÓ°·ÖÉí)
---teleport(Ë²ÒÆ)
+--avatar attack(é¾™å½±åˆ†èº«)
+--teleport(çž¬ç§»)
 --scene with black fog
  
 

@@ -1,10 +1,12 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
 
 
-namespace behavior
+namespace behaviac
 {
     public class Agent : MonoBehaviour
     {
@@ -23,8 +25,116 @@ namespace behavior
             }
         }
 
+        public struct AgentName_t
+        {
+            public string instantceName_;
+            public string className_;
+            public string displayName_;
+            public string desc_;
 
-        bool m_referencetree = false;
+            public AgentName_t(string instanceName, string className,
+                string displayName, string desc)
+            {
+                instantceName_ = instanceName;
+                className_ = className;
+
+                if (!string.IsNullOrEmpty(displayName))
+                {
+                    displayName_ = displayName;
+                }
+                else
+                {
+                    displayName_ = instantceName_.Replace(".", "::");
+                }
+
+                if (!string.IsNullOrEmpty(desc))
+                {
+                    desc_ = desc;
+                }
+                else
+                {
+                    desc_ = displayName_;
+                }
+            }
+
+            public string ClassName
+            {
+                get
+                {
+                    return this.className_;
+                }
+            }
+        }
+
+        public class CTagObjectDescriptor
+        {
+            public CTagObjectDescriptor()
+            {
+            }
+
+            public void Load(Agent parent, ISerializableNode node)
+            {
+                foreach (CMemberBase m in ms_members)
+                {
+                    m.Load(parent, node);
+                }
+
+                if (this.m_parent != null)
+                {
+                    this.m_parent.Load(parent, node);
+                }
+            }
+            public void Save(Agent parent, ISerializableNode node)
+            {
+                if (this.m_parent != null)
+                {
+                    this.m_parent.Save(parent, node);
+                }
+
+                foreach (CMemberBase m in ms_members)
+                {
+                    m.Save(parent, node);
+                }
+            }
+
+            public static void PushBackMember(List<CMemberBase> inMembers, CMemberBase toAddMember)
+            {
+                inMembers.Add(toAddMember);
+            }
+
+            public CMemberBase GetMember(string memberName)
+            {
+                if (this.ms_members != null)
+                {
+                    //CMemberBase pMember = this.ms_members.Find(delegate (CMemberBase m) {return m.GetName() == memberName;});
+                    for (int i = 0; i < this.ms_members.Count; ++i)
+                    {
+                        CMemberBase pMember = this.ms_members[i];
+                        if (pMember.GetName() == memberName)
+                        {
+                            return pMember;
+                        }
+                    }
+                }
+
+                if (this.m_parent != null)
+                {
+                    return this.m_parent.GetMember(memberName);
+                }
+
+                return null;
+            }
+
+            public List<CMemberBase> ms_members = new List<CMemberBase>();
+            public List<CMethodBase> ms_methods = new List<CMethodBase>();
+
+            public Type type;
+            public string displayName;
+            public string desc;
+            public CTagObjectDescriptor m_parent = null;
+        }
+
+
 
         BehaviorTreeTask m_currentBT;
 
@@ -56,6 +166,122 @@ namespace behavior
             }
         }
 
+        private static Dictionary<string, AgentName_t> ms_names;
+        public static Dictionary<string, AgentName_t> Names
+        {
+            get
+            {
+                if (ms_names == null)
+                {
+                    ms_names = new Dictionary<string, AgentName_t>();
+                }
+                return ms_names;
+            }
+        }
+
+        Variables m_variables;
+        Variables Variables
+        {
+            get
+            {
+                if (m_variables == null)
+                {
+                    m_variables = new Variables();
+                }
+
+                return m_variables;
+            }
+        }
+
+        private static Dictionary<CStringID, CTagObjectDescriptor> ms_metas;
+        public static Dictionary<CStringID, CTagObjectDescriptor> Metas
+        {
+            get
+            {
+                if (ms_metas == null)
+                {
+                    ms_metas = new Dictionary<CStringID, CTagObjectDescriptor>();
+                }
+                return ms_metas;
+            }
+        }
+
+
+#if !BEHAVIAC_RELEASE
+        int m_debug_verify;
+        private const int kAGENT_DEBUG_VERY = 0x01010101;
+#endif//#if !BEHAVIAC_RELEASE
+
+#if !BEHAVIAC_RELEASE
+        private string m_debug_name;
+#endif
+
+        public string GetName()
+        {
+#if !BEHAVIAC_RELEASE
+            return this.m_debug_name;
+#else
+			return this.name;
+#endif
+        }
+
+
+        public int m_priority;
+        public int m_contextId;
+
+        int m_id = -1;
+
+        static int ms_agent_index;
+        static Dictionary<string, int> ms_agent_type_index;
+
+        bool m_referencetree = false;
+
+
+
+        protected static void Init_(int contextId, Agent pAgent, int priority, string agentInstanceName)
+        {
+#if !BEHAVIAC_RELEASE
+            pAgent.m_debug_verify = kAGENT_DEBUG_VERY;
+#endif//#if !BEHAVIAC_RELEASE
+
+            Debug.Check(contextId >= 0, "invalid context id");
+
+            pAgent.m_contextId = contextId;
+            pAgent.m_id = ms_agent_index++;
+            pAgent.m_priority = priority;
+
+            pAgent.SetName(agentInstanceName);
+            pAgent.InitVariableRegistry();
+
+            {
+                Context c = Context.GetContext(contextId);
+                //World pWorldPtr = c.GetWorld(true);
+
+                //if (!System.Object.ReferenceEquals(pWorldPtr, null) && !System.Object.ReferenceEquals(pWorldPtr, pAgent))
+                //{
+                //    //string msg = string.Format("AddAgent {0} {1}", pAgent.GetName(), pWorldPtr.GetName());
+                //    //behaviac.Debug.Log(msg);
+                //    pWorldPtr.AddAgent(pAgent);
+                //}
+            }
+
+#if !BEHAVIAC_RELEASE
+            string agentClassName = pAgent.GetClassTypeName();
+            string instanceName = pAgent.GetName();
+
+            string aName = string.Format("{0}#{1}", agentClassName, instanceName);
+
+            ms_agents[aName] = pAgent;
+#endif
+
+            //pAgent.SubsribeToNetwork();
+        }
+
+        protected void Init()
+        {
+            Init_(this.m_contextId, this, this.m_priority, this.name);
+        }
+
 
 
         public bool btload(string relativePath, bool bForce /*= false*/)
@@ -77,6 +303,14 @@ namespace behavior
             return bOk;
         }
 
+        public void btonevent(string btEvent)
+        {
+            if (this.m_currentBT != null)
+            {
+                this.m_currentBT.onevent(this, btEvent);
+            }
+        }
+
         /**
         before set the found one as the current bt, 
         it aborts the current one and pushes it on the stack so that it will be continued later when the 
@@ -85,6 +319,11 @@ namespace behavior
         public void btsetcurrent(string relativePath)
         {
             _btsetcurrent(relativePath, TriggerMode.TM_Transfer, false);
+        }
+
+        public BehaviorTreeTask btgetcurrent()
+        {
+            return m_currentBT;
         }
 
         public void btreferencetree(string relativePath)
@@ -246,6 +485,446 @@ namespace behavior
             }
 
             return EBTStatus.BT_INVALID;
+        }
+
+        public static Property CreateProperty(string typeName, string propertyName, string defaultValue)
+        {
+            CMemberBase pMember = Agent.FindMemberBase(propertyName);
+
+            if (pMember != null)
+            {
+                Property pProperty = pMember.CreateProperty(defaultValue, false);
+
+                return pProperty;
+            }
+
+            return null;
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////////////////////
+        public static CMethodBase CreateMethod(CStringID agentClassId, CStringID methodClassId)
+        {
+            CMethodBase pM = Agent.FindMethodBase(agentClassId, methodClassId);
+            Debug.Check(pM != null);
+
+            return pM.clone();
+        }
+
+        public CMemberBase FindMember(string propertyName)
+        {
+            uint propertyId = Utils.MakeVariableId(propertyName);
+
+            CMemberBase m = this.FindMember(propertyId);
+            return m;
+        }
+
+        public CMemberBase FindMember(uint propertyId)
+        {
+            CTagObjectDescriptor objectDesc = this.GetDescriptor();
+
+            CMemberBase pMember = null;
+            for (int i = 0; i < objectDesc.ms_members.Count; ++i)
+            {
+                pMember = objectDesc.ms_members[i];
+                if (pMember.GetId().GetId() == propertyId)
+                {
+                    return pMember;
+                }
+            }
+
+            return null;
+        }
+
+        static int ParsePropertyNames(string fullPropertnName, ref string agentClassName)
+        {
+            //test_ns::AgentActionTest::Property1
+            int pBeginProperty = fullPropertnName.LastIndexOf(':');
+            if (pBeginProperty != -1)
+            {
+                //skip '::'
+                Debug.Check(fullPropertnName[pBeginProperty] == ':' && fullPropertnName[pBeginProperty - 1] == ':');
+                pBeginProperty += 1;
+
+                int pos = pBeginProperty - 2;
+
+                agentClassName = fullPropertnName.Substring(pBeginProperty);
+
+                return pos;
+            }
+
+            return -1;
+        }
+
+        public static CMemberBase FindMemberBase(string propertyName)
+        {
+            string propertyBaseName = null;
+            //test_ns::AgentActionTest::Property1
+            int pos = ParsePropertyNames(propertyName, ref propertyBaseName);
+
+            if (pos != -1)
+            {
+                string classNameTo = propertyName.Substring(0, pos).Replace("::", ".");
+
+                CStringID agentClassId = new CStringID(classNameTo);
+                CStringID propertyId = new CStringID(propertyBaseName);
+
+                CMemberBase m = FindMemberBase(agentClassId, propertyId);
+                return m;
+            }
+
+            return null;
+        }
+
+        public static CMethodBase FindMethodBase(string propertyName)
+        {
+            int pSep = propertyName.LastIndexOf(':');
+
+            if (pSep != -1)
+            {
+                Debug.Check(propertyName[pSep - 1] == ':');
+                string classNameTo = propertyName.Substring(0, pSep - 1);
+
+                CStringID agentClassId = new CStringID(classNameTo);
+                CStringID propertyId = new CStringID(propertyName.Substring(pSep + 1));
+
+                CMethodBase m = FindMethodBase(agentClassId, propertyId);
+                return m;
+            }
+
+            return null;
+        }
+
+        public static CMemberBase FindMemberBase(CStringID agentClassId, CStringID propertyId)
+        {
+            if (Metas.ContainsKey(agentClassId))
+            {
+                CTagObjectDescriptor pObejctDesc = Metas[agentClassId];
+                //CMemberBase pMember = pObejctDesc.ms_members.Find(delegate(CMemberBase m) { return m.GetId() == propertyId; });
+                for (int i = 0; i < pObejctDesc.ms_members.Count; ++i)
+                {
+                    CMemberBase pMember = pObejctDesc.ms_members[i];
+                    if (pMember.GetId() == propertyId)
+                    {
+                        return pMember;
+                    }
+                }
+
+                if (pObejctDesc.type.BaseType != null)
+                {
+                    CStringID agentBaseClassId = new CStringID(pObejctDesc.type.BaseType.FullName);
+
+                    CMemberBase pMember = FindMemberBase(agentBaseClassId, propertyId);
+
+                    return pMember;
+                }
+            }
+
+            return null;
+        }
+
+        public static CMethodBase FindMethodBase(CStringID agentClassId, CStringID propertyId)
+        {
+            if (Metas.ContainsKey(agentClassId))
+            {
+                //const string& className = it.first;
+
+                CTagObjectDescriptor pObejctDesc = Metas[agentClassId];
+                //CMethodBase pMethod = pObejctDesc.ms_methods.Find(delegate(CMethodBase m) { return m.GetId() == propertyId; });
+                for (int i = 0; i < pObejctDesc.ms_methods.Count; ++i)
+                {
+                    CMethodBase pMethod = pObejctDesc.ms_methods[i];
+                    if (pMethod.GetId() == propertyId)
+                    {
+                        return pMethod;
+                    }
+                }
+
+                if (pObejctDesc.type != null)
+                {
+                    if (pObejctDesc.type.BaseType != null)
+                    {
+                        CStringID agentBaseClassId = new CStringID(pObejctDesc.type.BaseType.FullName);
+
+                        CMethodBase pMethod = FindMethodBase(agentBaseClassId, propertyId);
+                        return pMethod;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public static Agent GetInstance(string agentInstanceName, int contextId)
+        {
+            Context c = Context.GetContext(contextId);
+
+            return c.GetInstance(agentInstanceName);
+        }
+
+        public static Agent GetInstance(string agentInstanceName)
+        {
+            return Agent.GetInstance(agentInstanceName, 0);
+        }
+
+        public string GetClassTypeName()
+        {
+            return this.GetType().FullName;
+        }
+
+        public int GetContextId()
+        {
+            return this.m_contextId;
+        }
+
+#if !BEHAVIAC_RELEASE
+        static Dictionary<string, Agent> ms_agents = new Dictionary<string, Agent>();
+        public static Agent GetAgent(string agentName)
+        {
+            Agent pAgent = Agent.GetInstance(agentName);
+            if (!System.Object.ReferenceEquals(pAgent, null))
+            {
+                return pAgent;
+            }
+
+            if (ms_agents.ContainsKey(agentName))
+            {
+                Agent pA = ms_agents[agentName];
+                return pA;
+            }
+
+            return null;
+        }
+#endif//BEHAVIAC_RELEASE
+
+        /**
+        get a variable by its name
+
+        it is invalid to call GetVariable<Type>("par_name") before exec the BT or SetVariableGetVariable<Type>("par_name") 
+        as "par_name" would not had been created then
+        */
+        public object GetVariable(string variableName)
+        {
+            uint varId = Utils.MakeVariableId(variableName);
+            object v = this.Variables.Get(this, varId);
+
+            return v;
+        }
+
+        public object GetVariable(uint variableId)
+        {
+            object v = this.Variables.Get(this, variableId);
+
+            return v;
+        }
+
+        public static Type GetTypeFromName(string typeName)
+        {
+            CStringID typeNameId = new CStringID(typeName);
+
+            if (Metas.ContainsKey(typeNameId))
+            {
+                CTagObjectDescriptor objectDesc = Metas[typeNameId];
+
+                return objectDesc.type;
+            }
+
+            return null;
+        }
+
+        public static CTagObjectDescriptor GetDescriptorByName(string className)
+        {
+            CStringID classNameid = new CStringID(className);
+            if (Metas.ContainsKey(classNameid))
+            {
+                return Metas[classNameid];
+            }
+
+            CTagObjectDescriptor od = new CTagObjectDescriptor();
+            Metas.Add(classNameid, od);
+
+            return od;
+        }
+
+        private CTagObjectDescriptor m_objectDescriptor = null;
+        public CTagObjectDescriptor GetDescriptor()
+        {
+            if (m_objectDescriptor == null)
+            {
+                m_objectDescriptor = Agent.GetDescriptorByName(this.GetType().FullName);
+            }
+
+            return m_objectDescriptor;
+        }
+
+        /**
+        return if 'agentInstanceName' is registerd.
+
+        @sa RegisterName
+        */
+        public static bool IsNameRegistered(string agentInstanceName)
+        {
+            return Names.ContainsKey(agentInstanceName);
+        }
+
+        //return true if 'agentClassName' is an agent class name or agent derived class name
+        //IsAgentClassName is different from IsRegistered that IsRegistered only returns true for those classes directly registered by 'Register'
+        //IsAgentClassName also returns true for those base classes.
+        public static bool IsAgentClassName(CStringID agentClassId)
+        {
+            if (Agent.Metas.ContainsKey(agentClassId))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public static bool IsAgentClassName(string agentClassName)
+        {
+            CStringID agentClassId = new CStringID(agentClassName);
+
+            bool bResult = IsAgentClassName(agentClassId);
+
+            return bResult;
+        }
+
+        static uint ms_idMask = 0xffffffff;
+        uint m_idFlag = 0xffffffff;
+
+        /**
+        Each agent can be assigned to an id flag by 'SetIdFlag'. A global mask can be specified by SetIdMask.
+        the id flag will be checked with this global mask.
+
+        @sa SetIdFlag SetIdMask
+        */
+        public bool IsMasked()
+        {
+            return (this.m_idFlag & Agent.IdMask()) != 0;
+        }
+
+        /**
+        @sa SetIdFlag IsMasked
+        */
+        public static void SetIdMask(uint idMask)
+        {
+            ms_idMask = idMask;
+        }
+
+        public static uint IdMask()
+        {
+            return ms_idMask;
+        }
+
+        void InitVariableRegistry()
+        {
+            this.ResetChangedVariables();
+        }
+
+        public void Instantiate<VariableType>(VariableType value, Property property_)
+        {
+            this.Variables.Instantiate(property_, value);
+        }
+
+        public void UnInstantiate(string variableName)
+        {
+            this.Variables.UnInstantiate(variableName);
+        }
+
+        public void UnLoad(string variableName)
+        {
+            this.Variables.UnLoad(variableName);
+        }
+
+        void ResetChangedVariables()
+        {
+            this.Variables.Reset();
+        }
+
+        public void SetName(string instanceName)
+        {
+            if (string.IsNullOrEmpty(instanceName))
+            {
+                int typeId = 0;
+                string typeFullName = this.GetType().FullName;
+                string typeName = null;
+                int pIt = typeFullName.LastIndexOf(':');
+                if (pIt != -1)
+                {
+                    typeName = typeFullName.Substring(pIt + 1);
+                }
+                else
+                {
+                    typeName = typeFullName;
+                }
+
+                if (ms_agent_type_index == null)
+                {
+                    ms_agent_type_index = new Dictionary<string, int>();
+                }
+
+                if (!ms_agent_type_index.ContainsKey(typeFullName))
+                {
+                    typeId = 0;
+                    ms_agent_type_index[typeFullName] = 1;
+                }
+                else
+                {
+                    typeId = ms_agent_type_index[typeFullName]++;
+                }
+
+                this.name += string.Format("{0}_{1}_{2}", typeName, typeId, this.m_id);
+            }
+            else
+            {
+                this.name = instanceName;
+            }
+
+#if !BEHAVIAC_RELEASE
+            this.m_debug_name = this.name.Replace(" ", "_");
+#endif
+        }
+
+        public void SetVariableRegistry(CMemberBase pMember, string variableName, object value, string staticClassName, uint variableId)
+        {
+            bool bValidName = !string.IsNullOrEmpty(variableName);
+
+            if (bValidName)
+            {
+                if (!string.IsNullOrEmpty(staticClassName))
+                {
+                    int contextId = this.GetContextId();
+                    Context c = Context.GetContext(contextId);
+
+                    c.SetStaticVariable(pMember, variableName, value, staticClassName, variableId);
+                }
+                else
+                {
+                    this.Variables.Set(this, pMember, variableName, value, variableId);
+                }
+            }
+        }
+
+        public void SetVariable<VariableType>(string variableName, VariableType value)
+        {
+            uint variableId = Utils.MakeVariableId(variableName);
+
+            this.SetVariable(variableName, value, variableId);
+        }
+
+        public void SetVariable<VariableType>(string variableName, VariableType value, uint variableId)
+        {
+            if (variableId == 0)
+            {
+                variableId = Utils.MakeVariableId(variableName);
+            }
+
+            this.Variables.Set(this, null, variableName, value, variableId);
+        }
+
+        public void SetVariableFromString(string variableName, string valueStr)
+        {
+            this.Variables.SetFromString(this, variableName, valueStr);
         }
 
 
