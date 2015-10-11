@@ -1432,6 +1432,21 @@ namespace behaviac
             return Path.GetExtension(path);
         }
 
+        //
+        public static int FirstToken(string params_, char sep, ref string token)
+        {
+            //const int 5
+            int end = params_.IndexOf(sep);
+
+            if (end != -1)
+            {
+                token = params_.Substring(0, end);
+                return end;
+            }
+
+            return -1;
+        }
+
         private static object FromStringStruct(Type type, string src)
         {
             object objValue = Activator.CreateInstance(type);
@@ -2355,6 +2370,208 @@ namespace behaviac
             string eventName3 = string.Format("{0}::{1}::param2", this.GetClassNameString().Replace(".", "::"), this.Name);
             pAgent.SetVariable(eventName3, param3);
         }
+    }
+
+    public enum E_VariableComparisonType
+    {
+        VariableComparisonType_Equal,           //( "Equal (==)" )
+        VariableComparisonType_NotEqual,        //( "Not Equal (!=)" )
+        VariableComparisonType_Greater,         //( "Greater (>)"  )
+        VariableComparisonType_GreaterEqual,    //( "Greater Or Equal (>=)" )
+        VariableComparisonType_Less,            //( "Lower (<)"  )
+        VariableComparisonType_LessEqual,       //( "Lower Or Equal (<=)" )
+        VariableComparisonType_And,             //( "Lower Or Equal (&&)" )
+        VariableComparisonType_Or               //( "Lower Or Equal (||)" )
+    }
+
+    public class VariableComparator
+    {
+        public static E_VariableComparisonType ParseComparisonType(string comparionOperator)
+        {
+            if (comparionOperator == "Equal")
+            {
+                return E_VariableComparisonType.VariableComparisonType_Equal;
+            }
+            else if (comparionOperator == "NotEqual")
+            {
+                return E_VariableComparisonType.VariableComparisonType_NotEqual;
+            }
+            else if (comparionOperator == "Greater")
+            {
+                return E_VariableComparisonType.VariableComparisonType_Greater;
+            }
+            else if (comparionOperator == "GreaterEqual")
+            {
+                return E_VariableComparisonType.VariableComparisonType_GreaterEqual;
+            }
+            else if (comparionOperator == "Less")
+            {
+                return E_VariableComparisonType.VariableComparisonType_Less;
+            }
+            else if (comparionOperator == "LessEqual")
+            {
+                return E_VariableComparisonType.VariableComparisonType_LessEqual;
+            }
+            else
+            {
+                Debug.Check(false);
+            }
+
+            return E_VariableComparisonType.VariableComparisonType_Equal;
+        }
+
+        public VariableComparator(Property lhs, Property rhs)
+        {
+            m_lhs = lhs;
+            m_rhs = rhs;
+        }
+
+        VariableComparator(VariableComparator copy)
+        {
+            m_lhs = copy.m_lhs;
+            m_rhs = copy.m_rhs;
+        }
+
+        ~VariableComparator()
+        {
+            m_lhs = null;
+            m_rhs = null;
+        }
+
+        public VariableComparator clone()
+        {
+            return new VariableComparator(this);
+        }
+
+        public static VariableComparator Create(string typeName, Property lhs, Property rhs)
+        {
+            return new VariableComparator(lhs, rhs);
+        }
+
+        //virtual void Serialize( Serializer& serializer ) = 0;
+        public bool Execute(Agent agentL, Agent agentR)
+        {
+            object lhs = this.m_lhs.GetValue(agentL);
+            object rhs = this.m_rhs.GetValue(agentR);
+
+            switch (this.m_comparisonType)
+            {
+                case E_VariableComparisonType.VariableComparisonType_Equal:
+                    if (System.Object.ReferenceEquals(lhs, null))
+                    {
+                        return System.Object.ReferenceEquals(rhs, null);
+                    }
+                    else
+                    {
+                        return lhs.Equals(rhs);
+                    }
+
+                case E_VariableComparisonType.VariableComparisonType_NotEqual:
+                    if (System.Object.ReferenceEquals(lhs, null))
+                    {
+                        return !System.Object.ReferenceEquals(rhs, null);
+                    }
+                    else
+                    {
+                        return !lhs.Equals(rhs);
+                    }
+
+                case E_VariableComparisonType.VariableComparisonType_Greater:
+                    return Details.Greater(lhs, rhs);
+
+                case E_VariableComparisonType.VariableComparisonType_GreaterEqual:
+                    return Details.GreaterEqual(lhs, rhs);
+
+                case E_VariableComparisonType.VariableComparisonType_Less:
+                    return Details.Less(lhs, rhs);
+
+                case E_VariableComparisonType.VariableComparisonType_LessEqual:
+                    return Details.LessEqual(lhs, rhs);
+
+                default:
+                    Debug.Check(false, "Unsupported comparison type");
+                    break;
+            }
+
+            return false;
+        }
+
+        public bool Execute(object lhs, Agent parent, Agent agentR)
+        {
+            object rhs = this.m_rhs.GetValue(agentR);
+
+            switch (this.m_comparisonType)
+            {
+                case E_VariableComparisonType.VariableComparisonType_Equal:
+                    {
+                        if (lhs == null)
+                        {
+                            if (rhs == null)
+                            {
+                                return true;
+                            }
+
+                            return false;
+                        }
+
+                        return lhs.Equals(rhs);
+                    }
+
+                case E_VariableComparisonType.VariableComparisonType_NotEqual:
+                    {
+                        if (lhs == null)
+                        {
+                            if (rhs != null)
+                            {
+                                return true;
+                            }
+
+                            return false;
+                        }
+
+                        return !lhs.Equals(rhs);
+                    }
+
+                case E_VariableComparisonType.VariableComparisonType_Greater:
+                    return Details.Greater(lhs, rhs);
+
+                case E_VariableComparisonType.VariableComparisonType_GreaterEqual:
+                    return Details.GreaterEqual(lhs, rhs);
+
+                case E_VariableComparisonType.VariableComparisonType_Less:
+                    return Details.Less(lhs, rhs);
+
+                case E_VariableComparisonType.VariableComparisonType_LessEqual:
+                    return Details.LessEqual(lhs, rhs);
+
+                default:
+                    Debug.Check(false, "Unsupported comparison type");
+                    break;
+            }
+
+            return false;
+        }
+
+        void SetProperty(Property lhs, Property rhs)
+        {
+            m_lhs = lhs;
+            m_rhs = rhs;
+        }
+
+        public void SetComparisonType(E_VariableComparisonType type)
+        {
+            m_comparisonType = type;
+        }
+
+        E_VariableComparisonType GetComparisonType()
+        {
+            return m_comparisonType;
+        }
+
+        protected Property m_lhs;
+        protected Property m_rhs;
+        //The operator used in the comparison
+        protected E_VariableComparisonType m_comparisonType;
     }
 
 

@@ -9,24 +9,27 @@ namespace behaviac
     public class Action : BehaviorNode
     {
 
+        protected CMethodBase m_method;
+        EBTStatus m_resultOption;
+        CMethodBase m_resultFunctor;
+        EBTStatus m_resultPreconditionFail;
+
+        public Action()
+        {
+            m_resultOption = EBTStatus.BT_INVALID;
+            m_resultPreconditionFail = EBTStatus.BT_FAILURE;
+        }
+        ~Action()
+        {
+            m_method = null;
+            m_resultFunctor = null;
+        }
 
         protected override BehaviorTask createTask()
         {
             ActionTask pTask = new ActionTask();
 
             return pTask;
-        }
-
-        static string ParseInstanceName(string fullName, ref string instanceName)
-        {
-            //Self.AgentActionTest::Action2(0)
-            int pClassBegin = fullName.IndexOf('.');
-            Debug.Check(pClassBegin != -1);
-
-            instanceName = fullName.Substring(0, pClassBegin);
-
-            string propertyName = fullName.Substring(pClassBegin + 1);
-            return propertyName;
         }
 
         static int ParseMethodNames(string fullName, ref string agentIntanceName, ref string agentClassName, ref string methodName)
@@ -167,10 +170,113 @@ namespace behaviac
             return method;
         }
 
+        protected override void load(int version, string agentType, List<property_t> properties)
+        {
+            base.load(version, agentType, properties);
+
+            foreach (property_t p in properties)
+            {
+                if (p.name == "Method")
+                {
+                    if (!string.IsNullOrEmpty(p.value))
+                    {
+                        this.m_method = Action.LoadMethod(p.value);
+                    }//if (p.value[0] != '\0')
+                }
+                else if (p.name == "ResultOption")
+                {
+                    if (p.value == "BT_INVALID")
+                    {
+                        m_resultOption = EBTStatus.BT_INVALID;
+                    }
+                    else if (p.value == "BT_FAILURE")
+                    {
+                        m_resultOption = EBTStatus.BT_FAILURE;
+                    }
+                    else if (p.value == "BT_RUNNING")
+                    {
+                        m_resultOption = EBTStatus.BT_RUNNING;
+                    }
+                    else
+                    {
+                        m_resultOption = EBTStatus.BT_SUCCESS;
+                    }
+                }
+                else if (p.name == "ResultFunctor")
+                {
+                    if (p.value[0] != '\0')
+                    {
+                        this.m_resultFunctor = Action.LoadMethod(p.value);
+                    }
+                }
+                else if (p.name == "PreconditionFailResult")
+                {
+                    if (p.value == "BT_FAILURE")
+                    {
+                        m_resultPreconditionFail = EBTStatus.BT_FAILURE;
+                    }
+                    else if (p.value == "BT_SUCCESS")
+                    {
+                        m_resultPreconditionFail = EBTStatus.BT_SUCCESS;
+                    }
+                    else
+                    {
+                        Debug.Check(false);
+                    }
+                }
+                else
+                {
+                    //Debug.Check(0, "unrecognised property %s", p.name);
+                }
+            }
+        }
+
+        public override bool IsValid(Agent pAgent, BehaviorTask pTask)
+        {
+            if (!(pTask.GetNode() is Action))
+            {
+                return false;
+            }
+
+            return base.IsValid(pAgent, pTask);
+        }
+
+        public EBTStatus Execute(Agent pAgent, EBTStatus childStatus)
+        {
+            EBTStatus result = EBTStatus.BT_SUCCESS;
+
+            if (this.m_method != null)
+            {
+                object returnValue = this.m_method.Invoke(pAgent);
+
+                if (this.m_resultOption != EBTStatus.BT_INVALID)
+                {
+                    result = this.m_resultOption;
+                }
+                else if (this.m_resultFunctor != null)
+                {
+                    result = (EBTStatus)this.m_resultFunctor.Invoke(pAgent, returnValue);
+                }
+                else
+                {
+                    Debug.Check(returnValue is EBTStatus, "method's return type is not EBTStatus");
+                    result = (EBTStatus)returnValue;
+                }
+            }
+            else
+            {
+                result = this.update_impl(pAgent, childStatus);
+            }
+
+            return result;
+        }
+
 
 
         class ActionTask : LeafTask
         {
+            static int ms_lastNodeId = -2;
+
             public ActionTask()
             {
 
@@ -178,6 +284,47 @@ namespace behaviac
             ~ActionTask()
             {
             }
+
+            protected override bool onenter(Agent pAgent)
+            {
+                return true;
+            }
+            protected override void onexit(Agent pAgent, EBTStatus s)
+            {
+            }
+
+            static void SetNodeId(int nodeId)
+            {
+                ms_lastNodeId = nodeId;
+            }
+
+            static void ClearNodeId()
+            {
+                ms_lastNodeId = -2;
+            }
+
+            public static int GetNodeId()
+            {
+                return ms_lastNodeId;
+            }
+
+            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            {
+                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+
+                Debug.Check(this.GetNode() is Action, "node is not an Action");
+                Action pActionNode = (Action)(this.GetNode());
+
+                if (!this.CheckPredicates(pAgent))
+                {
+                    return pActionNode.m_resultPreconditionFail;
+                }
+
+                EBTStatus result = pActionNode.Execute(pAgent, childStatus);
+
+                return result;
+            }
+            
         }
     }
 }

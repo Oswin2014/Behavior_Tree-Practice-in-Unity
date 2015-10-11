@@ -167,7 +167,7 @@ abstract BehaviorTask
 
 do: BehaviorTask.exec()
 GameLevelCommon.Update() / GameLevelCommon.Update() -> Player.tick()
-->btexec()
+->Agent.btexec()
 ->Agent.btexec_()
 ->BehaviorTask.exec()
 
@@ -571,6 +571,35 @@ BTreeMgr
 }
 }
 
+--BehaviorTask.isContinueTicking()
+
+return true if it is continuing running for the next tick
+this virtual function is used for those nodes which will run continuously in the next tick
+so that the tree can record it to tick it directly in the next tick.
+如果当前节点没有执行结束需要多次执行, 会直接记到父节点(向上递归寻找到BranchTask类型)中的m_currentTask
+下一次父节点被执行时直接执行m_currentTask
+
+--Selectorloop.update()
+--处理被子节点中触发的Event打断的情况, 只有被Event打断后恢复调用BehaviorTreeTask.resume()
+才会SetReturnStatus()(一般m_returnStatus == BT_INVALID)
+for (int i = 0; i < this.m_children.Count; ++i)
+EBTStatus returnStatus = pSubTree.GetReturnStatus();
+if (returnStatus != EBTStatus.BT_INVALID)
+{
+    pSubTree.SetReturnStatus(EBTStatus.BT_INVALID);
+	//如果子节点触发的Event返回BT_SUCCESS, 则直接返回BT_SUCCESS
+    if (returnStatus == EBTStatus.BT_SUCCESS)
+    {
+        return EBTStatus.BT_SUCCESS;
+    }
+	//如果Event返回BT_FAILURE, 则跳过这个触发Event的子节点,执行下一个子节点
+    else if (returnStatus == EBTStatus.BT_FAILURE)
+    {
+        idx = i;
+        break;
+    }
+}
+
 ----------------------------------------------
 >match-rv
 {
@@ -642,8 +671,6 @@ BTSequence : BTNode
 {
 	
 }
-
-
 
 ---------------------------------------------------
 

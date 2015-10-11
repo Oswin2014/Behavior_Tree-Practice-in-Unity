@@ -131,6 +131,42 @@ namespace behaviac
             return true;
         }
 
+        public virtual bool CheckPredicates(Agent pAgent)
+        {
+            if (this.m_attachments == null || this.m_attachments.Count == 0)
+                return true;
+
+            bool lastCombineValue = false;
+            for (int i = 0; i < this.m_attachments.Count; ++i)
+            {
+                AttachmentTask attchment = this.m_attachments[i];
+                Predicate.PredicateTask predicateTask = attchment as Predicate.PredicateTask;
+
+                if (predicateTask != null)
+                {
+                    EBTStatus executeStatus = predicateTask.GetStatus();
+                    if (executeStatus == EBTStatus.BT_RUNNING || executeStatus == EBTStatus.BT_INVALID)
+                        executeStatus = predicateTask.exec(pAgent);
+
+                    bool taskBoolean = getBooleanFromStatus(executeStatus);
+                    if (i == 0)
+                    {
+                        lastCombineValue = taskBoolean;
+                    }
+                    else
+                    {
+                        bool andOp = predicateTask.IsAnd();
+                        if (andOp)
+                            lastCombineValue = lastCombineValue && taskBoolean;
+                        else
+                            lastCombineValue = lastCombineValue || taskBoolean;
+                    }
+                }
+            }
+
+            return lastCombineValue;
+        }
+
         public EBTStatus exec(Agent pAgent)
         {
 
@@ -257,6 +293,19 @@ namespace behaviac
         public BranchTask GetParent()
         {
             return this.m_parent;
+        }
+
+        bool getBooleanFromStatus(EBTStatus status)
+        {
+            if (status == EBTStatus.BT_FAILURE)
+                return false;
+            else if (status == EBTStatus.BT_SUCCESS)
+                return true;
+            else
+            {
+                Debug.LogError("Predicate can not return RUNNING status!");
+                return false;
+            }
         }
 
 

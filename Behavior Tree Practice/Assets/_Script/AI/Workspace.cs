@@ -1,7 +1,10 @@
 ﻿
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Security;
+using Mono.Xml;
 using UnityEngine;
 
 namespace behaviac
@@ -116,6 +119,7 @@ namespace behaviac
 #else
 		private static bool ms_bIsSocketing = false;
 #endif
+
         //it is enabled on pc by default
         public static bool IsSocketing
         {
@@ -220,6 +224,9 @@ namespace behaviac
         
 		static Dictionary<CStringID, int> m_actions_count = new Dictionary<CStringID, int>();
 
+#if !BEHAVIAC_RELEASE
+        private static string ms_workspaceExportPathAbs;
+#endif
 
 
         /**
@@ -382,6 +389,82 @@ namespace behaviac
             return true;
         }
 
+        static bool LoadWorkspaceSetting(string file, string ext, ref string workspaceFile)
+        {
+            try
+            {
+                byte[] pBuffer = ReadFileToBuffer(file, ext);
+                if (pBuffer != null)
+                {
+                    string xml = System.Text.Encoding.UTF8.GetString(pBuffer);
+                    SecurityParser xmlDoc = new SecurityParser();
+                    xmlDoc.LoadXml(xml);
+
+                    SecurityElement rootNode = xmlDoc.ToXml();
+                    if (rootNode.Tag == "workspace")
+                    {
+                        workspaceFile = rootNode.Attribute("path");
+                        return true;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                string errorInfo = string.Format("Load Workspace {0} Error : {1}", file, e.Message);
+                behaviac.Debug.LogError(errorInfo);
+            }
+
+            return false;
+        }
+
+        public static void LoadWorkspaceAbsolutePath()
+        {
+#if !BEHAVIAC_RELEASE
+            if (Config.IsLoggingOrSocketing)
+            {
+                //relative to exe's current path
+                string workspaceExportPath = WorkspaceExportPath;
+
+                //workspaceExportPath is the path to the export:
+                //like: ..\example\spaceship\data\bt\exported
+                string fullPath = Path.Combine(workspaceExportPath, "behaviors.dbg");
+
+                string workspaceFilePathRelative = "";
+                bool bOk = LoadWorkspaceSetting(fullPath, ".xml", ref workspaceFilePathRelative);
+                if (bOk)
+                {
+                    //workspaceFilePathRelative stored in behaviors.dbg.xml is the path relative to export
+                    //convert it to the full path
+                    if (!Path.IsPathRooted(workspaceExportPath))
+                    {
+                        ms_workspaceExportPathAbs = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
+                        {
+                            int p = ms_workspaceExportPathAbs.LastIndexOf("Assets", StringComparison.OrdinalIgnoreCase);
+                            if (p != -1)
+                            {
+                                ms_workspaceExportPathAbs = ms_workspaceExportPathAbs.Substring(0, p);
+                            }
+                        }
+
+                        ms_workspaceExportPathAbs = Path.Combine(ms_workspaceExportPathAbs, workspaceExportPath);
+                    }
+                    else
+                    {
+                        ms_workspaceExportPathAbs = workspaceExportPath;
+                    }
+
+                    ms_workspaceExportPathAbs = ms_workspaceExportPathAbs.Replace('\\', '/');
+
+                    m_workspaceFileAbs = Path.Combine(ms_workspaceExportPathAbs, workspaceFilePathRelative);
+                }
+                else
+                {
+                }
+            }
+#endif
+        }
+
         public static void RecordBTAgentMapping(string relativePath, Agent agent)
         {
             if (ms_allBehaviorTreeTasks == null)
@@ -457,6 +540,18 @@ namespace behaviac
 
             fileFormat_ = format;
 
+            if (string.IsNullOrEmpty(ms_workspaceExportPath))
+            {
+                behaviac.Debug.LogError("No workspace file is specified!");
+                behaviac.Debug.Check(false);
+
+                return false;
+            }
+
+            LoadWorkspaceAbsolutePath();
+
+            ms_deltaFrames = 1;
+
             //////////////////////////////////////////////////////////
             //only register metas and others at the 1st time
             if (bFirstTime)
@@ -510,6 +605,23 @@ namespace behaviac
         public static string GetWorkspaceAbsolutePath()
         {
             return m_workspaceFileAbs;
+        }
+
+        private static int ms_deltaFrames;
+
+        public static void SetDeltaFrames(int deltaFrames)
+        {
+            ms_deltaFrames = deltaFrames;
+        }
+
+        public static int GetDeltaFrames()
+        {
+            return ms_deltaFrames;
+        }
+
+        public static Dictionary<string, BehaviorTree> GetBehaviorTrees()
+        {
+            return ms_behaviortrees;
         }
 
 

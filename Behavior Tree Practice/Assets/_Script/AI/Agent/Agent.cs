@@ -332,6 +332,11 @@ namespace behaviac
             this.m_referencetree = true;
         }
 
+        public void bteventtree(string relativePath, TriggerMode triggerMode)
+        {
+            this._btsetcurrent(relativePath, triggerMode, true);
+        }
+
         private void _btsetcurrent(string relativePath, TriggerMode triggerMode, bool bByEvent)
         {
             bool bEmptyPath = string.IsNullOrEmpty(relativePath);
@@ -801,6 +806,25 @@ namespace behaviac
         public bool IsMasked()
         {
             return (this.m_idFlag & Agent.IdMask()) != 0;
+        }
+
+        public static bool IsDerived(Agent pAgent, string agentType)
+        {
+            bool bIsDerived = false;
+            Type type = pAgent.GetType();
+
+            while (type != null)
+            {
+                if (type.FullName == agentType)
+                {
+                    bIsDerived = true;
+                    break;
+                }
+
+                type = type.BaseType;
+            }
+
+            return bIsDerived;
         }
 
         /**

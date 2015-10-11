@@ -184,6 +184,30 @@ namespace behaviac
             return this.m_bHasEvents;
         }
 
+#if !BEHAVIAC_RELEASE
+        private string m_agentType;
+
+        public void SetAgentType(string agentType)
+        {
+            this.m_agentType = agentType.Replace("::", ".");
+        }
+
+        public string GetAgentType()
+        {
+            return this.m_agentType;
+        }
+#endif
+        public virtual bool IsValid(Agent pAgent, BehaviorTask pTask)
+        {
+#if !BEHAVIAC_RELEASE
+            Debug.Check(!string.IsNullOrEmpty(this.m_agentType));
+
+            return Agent.IsDerived(pAgent, this.m_agentType);
+#else
+            return true;
+#endif//#if !BEHAVIAC_RELEASE
+        }
+
         protected virtual void load(int version, string agentType, List<property_t> properties)
         {
             foreach (property_t p in properties)
@@ -342,6 +366,9 @@ namespace behaviac
             this.m_bHasEvents = hasEvents;
         }
 
+        //the bt export type is c# will generate update_impl.
+        protected virtual EBTStatus update_impl(Agent pAgent, EBTStatus childStatus) { return EBTStatus.BT_FAILURE; }
+
     }
 
     // ============================================================================
@@ -364,6 +391,27 @@ namespace behaviac
 
     public class BehaviorTree : BehaviorNode
     {
+        public class Descriptor_t
+        {
+            public Property Descriptor;
+            public Property Reference;
+
+            public Descriptor_t()
+            { }
+
+            public Descriptor_t(Descriptor_t copy)
+            {
+                Descriptor = copy.Descriptor != null ? copy.Descriptor.clone() : null;
+                Reference = copy.Reference != null ? copy.Reference.clone() : null;
+            }
+
+            ~Descriptor_t()
+            {
+                this.Descriptor = null;
+                this.Reference = null;
+            }
+        };
+
 
         protected override BehaviorTask createTask()
         {
@@ -377,7 +425,36 @@ namespace behaviac
         {
             return this.m_name;
         }
-        
+
+        protected string m_domains;
+
+        public string GetDomains()
+        {
+            return this.m_domains;
+        }
+
+        public void SetDomains(string domains)
+        {
+            this.m_domains = domains;
+        }
+
+        List<Descriptor_t> m_descriptorRefs;
+
+        public List<Descriptor_t> GetDescriptors()
+        {
+            return m_descriptorRefs;
+        }
+
+        public void SetDescriptors(string descriptors)
+        {
+            this.m_descriptorRefs = (List<Descriptor_t>)StringUtils.FromString(typeof(List<Descriptor_t>), descriptors, false);
+
+            for (int i = 0; i < this.m_descriptorRefs.Count; ++i)
+            {
+                Descriptor_t d = this.m_descriptorRefs[i];
+                d.Descriptor.SetDefaultValue(d.Reference);
+            }
+        }
         /**
         <?xml version="1.0" encoding="utf-8"?>
         <behavior agenttype="AgentTest">
