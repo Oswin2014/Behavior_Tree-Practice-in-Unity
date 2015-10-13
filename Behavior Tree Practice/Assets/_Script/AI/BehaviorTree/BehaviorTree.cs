@@ -8,7 +8,7 @@ using Mono.Xml;
 
 
 
-namespace behavior
+namespace behaviac
 {
     public struct property_t
     {
@@ -24,11 +24,18 @@ namespace behavior
 
     public abstract class BehaviorNode
     {
+        private string m_className;
+        private int m_id;
 
         public EBTStatus m_status;
         protected List<BehaviorNode> m_attachments;
+        public List<Property> m_pars;
+
         protected BehaviorNode m_parent;
         protected List<BehaviorNode> m_children;
+
+        public CMethodBase m_enterAction;
+        public CMethodBase m_exitAction;
 
         protected bool m_bHasEvents;
 
@@ -63,6 +70,21 @@ namespace behavior
             this.m_attachments.Add(pAttachment);
         }
 
+        public void AddPar(string type, string name, string value, string eventParam)
+        {
+            Property pProperty = Property.Create(type, name, value, false, false);
+            if (!string.IsNullOrEmpty(eventParam))
+            {
+                pProperty.SetRefName(eventParam);
+            }
+
+            if (this.m_pars == null)
+            {
+                this.m_pars = new List<Property>();
+            }
+            this.m_pars.Add(pProperty);
+        }
+
         public void Clear()
         {
             if (this.m_attachments != null)
@@ -86,6 +108,11 @@ namespace behavior
             pTask.Init(this);
 
             return pTask;
+        }
+
+        protected static BehaviorNode Create(string className)
+        {
+            return Workspace.CreateBehaviorNode(className);
         }
 
         public virtual bool enteraction_impl(Agent pAgent) { return false; }
@@ -132,9 +159,99 @@ namespace behavior
             return null;
         }
 
+        public void SetClassNameString(string className)
+        {
+            this.m_className = className;
+        }
+
+        public string GetClassNameString()
+        {
+            return this.m_className;
+        }
+
+        public int GetId()
+        {
+            return this.m_id;
+        }
+
+        public void SetId(int id)
+        {
+            this.m_id = id;
+        }
+
         public bool HasEvents()
         {
             return this.m_bHasEvents;
+        }
+
+#if !BEHAVIAC_RELEASE
+        private string m_agentType;
+
+        public void SetAgentType(string agentType)
+        {
+            this.m_agentType = agentType.Replace("::", ".");
+        }
+
+        public string GetAgentType()
+        {
+            return this.m_agentType;
+        }
+#endif
+        public virtual bool IsValid(Agent pAgent, BehaviorTask pTask)
+        {
+#if !BEHAVIAC_RELEASE
+            Debug.Check(!string.IsNullOrEmpty(this.m_agentType));
+
+            return Agent.IsDerived(pAgent, this.m_agentType);
+#else
+            return true;
+#endif//#if !BEHAVIAC_RELEASE
+        }
+
+        protected virtual void load(int version, string agentType, List<property_t> properties)
+        {
+            foreach (property_t p in properties)
+            {
+                if (p.name == "EnterAction")
+                {
+                    if (!string.IsNullOrEmpty(p.value))
+                    {
+                        this.m_enterAction = Action.LoadMethod(p.value);
+                    }//if (p.value[0] != '\0')
+                }
+                else if (p.name == "ExitAction")
+                {
+                    if (!string.IsNullOrEmpty(p.value))
+                    {
+                        this.m_exitAction = Action.LoadMethod(p.value);
+                    }//if (p.value[0] != '\0')
+                }
+            }
+
+            //string nodeType = this.GetClassNameString().Replace(".", "::");
+            //Workspace.HandleNodeLoaded(nodeType, properties);
+        }
+
+        protected static BehaviorNode load(string agentType, SecurityElement node)
+        {
+            Debug.Check(node.Tag == "node");
+
+            int version = int.Parse(node.Attribute("version"));
+
+            string pClassName = node.Attribute("class");
+            BehaviorNode pNode = BehaviorNode.Create(pClassName);
+
+            Debug.Check(pNode != null);
+            if (pNode != null)
+            {
+                pNode.SetClassNameString(pClassName);
+                string idStr = node.Attribute("id");
+                pNode.SetId(Convert.ToInt32(idStr));
+
+                pNode.load_properties_pars_attachments_children(true, version, agentType, node);
+            }
+
+            return pNode;
         }
 
 		protected void load_properties_pars_attachments_children(bool bNode, int version, string agentType, SecurityElement node)
@@ -249,6 +366,9 @@ namespace behavior
             this.m_bHasEvents = hasEvents;
         }
 
+        //the bt export type is c# will generate update_impl.
+        protected virtual EBTStatus update_impl(Agent pAgent, EBTStatus childStatus) { return EBTStatus.BT_FAILURE; }
+
     }
 
     // ============================================================================
@@ -271,6 +391,27 @@ namespace behavior
 
     public class BehaviorTree : BehaviorNode
     {
+        public class Descriptor_t
+        {
+            public Property Descriptor;
+            public Property Reference;
+
+            public Descriptor_t()
+            { }
+
+            public Descriptor_t(Descriptor_t copy)
+            {
+                Descriptor = copy.Descriptor != null ? copy.Descriptor.clone() : null;
+                Reference = copy.Reference != null ? copy.Reference.clone() : null;
+            }
+
+            ~Descriptor_t()
+            {
+                this.Descriptor = null;
+                this.Reference = null;
+            }
+        };
+
 
         protected override BehaviorTask createTask()
         {
@@ -284,7 +425,36 @@ namespace behavior
         {
             return this.m_name;
         }
-        
+
+        protected string m_domains;
+
+        public string GetDomains()
+        {
+            return this.m_domains;
+        }
+
+        public void SetDomains(string domains)
+        {
+            this.m_domains = domains;
+        }
+
+        List<Descriptor_t> m_descriptorRefs;
+
+        public List<Descriptor_t> GetDescriptors()
+        {
+            return m_descriptorRefs;
+        }
+
+        public void SetDescriptors(string descriptors)
+        {
+            this.m_descriptorRefs = (List<Descriptor_t>)StringUtils.FromString(typeof(List<Descriptor_t>), descriptors, false);
+
+            for (int i = 0; i < this.m_descriptorRefs.Count; ++i)
+            {
+                Descriptor_t d = this.m_descriptorRefs[i];
+                d.Descriptor.SetDefaultValue(d.Reference);
+            }
+        }
         /**
         <?xml version="1.0" encoding="utf-8"?>
         <behavior agenttype="AgentTest">

@@ -1,0 +1,218 @@
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+
+namespace behaviac
+{
+    public enum EComputeOperator
+    {
+        E_INVALID,
+        E_ADD,
+        E_SUB,
+        E_MUL,
+        E_DIV
+    }
+
+    public class Compute : BehaviorNode
+    {
+        protected Property m_opl;
+        protected Property m_opr1;
+        protected CMethodBase m_opr1_m;
+        protected Property m_opr2;
+        protected CMethodBase m_opr2_m;
+        protected EComputeOperator m_operator = EComputeOperator.E_INVALID;
+
+        public Compute()
+        {
+        }
+        ~Compute()
+        {
+            m_opl = null;
+            m_opr1 = null;
+            m_opr1_m = null;
+            m_opr2 = null;
+            m_opr2_m = null;
+        }
+
+        protected override BehaviorTask createTask()
+        {
+            return new ComputeTask();
+        }
+
+        protected override void load(int version, string agentType, List<property_t> properties)
+        {
+            base.load(version, agentType, properties);
+
+            string propertyName = null;
+
+            foreach (property_t p in properties)
+            {
+                if (p.name == "Opl")
+                {
+                    this.m_opl = Condition.LoadLeft(p.value, ref propertyName, null);
+                }
+                else if (p.name == "Operator")
+                {
+                    if (p.value == "Add")
+                    {
+                        this.m_operator = EComputeOperator.E_ADD;
+                    }
+                    else if (p.value == "Sub")
+                    {
+                        this.m_operator = EComputeOperator.E_SUB;
+                    }
+                    else if (p.value == "Mul")
+                    {
+                        this.m_operator = EComputeOperator.E_MUL;
+                    }
+                    else if (p.value == "Div")
+                    {
+                        this.m_operator = EComputeOperator.E_DIV;
+                    }
+                    else
+                    {
+                        Debug.Check(false);
+                    }
+                }
+                else if (p.name == "Opr1")
+                {
+                    int pParenthesis = p.value.IndexOf('(');
+                    if (pParenthesis == -1)
+                    {
+                        string typeName = null;
+                        this.m_opr1 = Condition.LoadRight(p.value, propertyName, ref typeName);
+                    }
+                    else
+                    {
+                        //method
+                        this.m_opr1_m = Action.LoadMethod(p.value);
+                    }
+                }
+                else if (p.name == "Opr2")
+                {
+                    int pParenthesis = p.value.IndexOf('(');
+                    if (pParenthesis == -1)
+                    {
+                        string typeName = null;
+                        this.m_opr2 = Condition.LoadRight(p.value, propertyName, ref typeName);
+                    }
+                    else
+                    {
+                        //method
+                        this.m_opr2_m = Action.LoadMethod(p.value);
+                    }
+                }
+                else
+                {
+                    //Debug.Check(0, "unrecognised property %s", p.name);
+                }
+            }
+        }
+
+        public static bool EvaluteCompute(Agent pAgent, Property opl, Property opr1, CMethodBase opr1_m, EComputeOperator opr, Property opr2, CMethodBase opr2_m)
+        {
+            bool bValid = false;
+            object value1 = null;
+
+            if (opl != null)
+            {
+                if (opr1_m != null)
+                {
+                    bValid = true;
+                    value1 = opr1_m.Invoke(pAgent);
+                }
+                else if (opr1 != null)
+                {
+                    bValid = true;
+                    Agent pParentR = opr1.GetParentAgent(pAgent);
+
+                    value1 = opr1.GetValue(pParentR);
+                }
+
+                if (opr2_m != null)
+                {
+                    bValid = true;
+                    object value2 = opr2_m.Invoke(pAgent);
+
+                    Agent pParentOpl = opl.GetParentAgent(pAgent);
+                    object returnValue = Details.ComputeValue(value1, value2, opr);
+
+                    opl.SetValue(pParentOpl, returnValue);
+                }
+                else if (opr2 != null)
+                {
+                    bValid = true;
+                    Agent pParentL = opl.GetParentAgent(pAgent);
+                    Agent pParentR = opr2.GetParentAgent(pAgent);
+
+                    object value2 = opr2.GetValue(pParentR);
+
+                    object returnValue = Details.ComputeValue(value1, value2, opr);
+
+                    opl.SetValue(pParentL, returnValue);
+                }
+            }
+
+            return bValid;
+        }
+
+        public override bool IsValid(Agent pAgent, BehaviorTask pTask)
+        {
+            if (!(pTask.GetNode() is Compute))
+            {
+                return false;
+            }
+
+            return base.IsValid(pAgent, pTask);
+        }
+
+
+
+        class ComputeTask : LeafTask
+        {
+            public ComputeTask()
+            {
+            }
+
+            ~ComputeTask()
+            {
+            }
+
+            protected override bool isContinueTicking()
+            {
+                return false;
+            }
+
+            protected override bool onenter(Agent pAgent)
+            {
+                return true;
+            }
+            protected override void onexit(Agent pAgent, EBTStatus s)
+            {
+            }
+
+            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            {
+                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+
+                EBTStatus result = EBTStatus.BT_SUCCESS;
+
+                Debug.Check(this.GetNode() is Compute);
+                Compute pComputeNode = (Compute)(this.GetNode());
+
+                bool bValid = Compute.EvaluteCompute(pAgent, pComputeNode.m_opl, pComputeNode.m_opr1, pComputeNode.m_opr1_m,
+                    pComputeNode.m_operator, pComputeNode.m_opr2, pComputeNode.m_opr2_m);
+
+                if (!bValid)
+                {
+                    result = pComputeNode.update_impl(pAgent, childStatus);
+                }
+
+                return result;
+            }
+
+        }
+
+    }
+}

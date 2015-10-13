@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 
 
-namespace behavior
+namespace behaviac
 {
 
     public enum EBTStatus
@@ -80,6 +80,91 @@ namespace behavior
             }
 
             this.m_node = null;
+        }
+
+        /**
+        return false if the event handling needs to be stopped
+
+        an event can be configured to stop being checked if triggered
+        */
+        public bool CheckEvents(string eventName, Agent pAgent)
+        {
+            if (this.m_attachments != null)
+            {
+                //bool bTriggered = false;
+                for (int i = 0; i < this.m_attachments.Count; ++i)
+                {
+                    AttachmentTask pA = this.m_attachments[i];
+                    Event.EventTask pE = pA as Event.EventTask;
+
+                    //check events only
+                    if (pE != null && !string.IsNullOrEmpty(eventName))
+                    {
+                        string pEventName = pE.GetEventName();
+
+                        if (!string.IsNullOrEmpty(pEventName) && pEventName == eventName)
+                        {
+                            EBTStatus currentStatus = pA.GetStatus();
+
+                            if (currentStatus == EBTStatus.BT_RUNNING || currentStatus == EBTStatus.BT_INVALID)
+                            {
+                                currentStatus = pA.exec(pAgent);
+                            }
+
+                            if (currentStatus == EBTStatus.BT_SUCCESS)
+                            {
+                                //bTriggered = true;
+
+                                if (pE.TriggeredOnce())
+                                {
+                                    return false;
+                                }
+                            }
+                            else if (currentStatus == EBTStatus.BT_FAILURE)
+                            {
+                            }
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        public virtual bool CheckPredicates(Agent pAgent)
+        {
+            if (this.m_attachments == null || this.m_attachments.Count == 0)
+                return true;
+
+            bool lastCombineValue = false;
+            for (int i = 0; i < this.m_attachments.Count; ++i)
+            {
+                AttachmentTask attchment = this.m_attachments[i];
+                Predicate.PredicateTask predicateTask = attchment as Predicate.PredicateTask;
+
+                if (predicateTask != null)
+                {
+                    EBTStatus executeStatus = predicateTask.GetStatus();
+                    if (executeStatus == EBTStatus.BT_RUNNING || executeStatus == EBTStatus.BT_INVALID)
+                        executeStatus = predicateTask.exec(pAgent);
+
+                    bool taskBoolean = getBooleanFromStatus(executeStatus);
+                    if (i == 0)
+                    {
+                        lastCombineValue = taskBoolean;
+                    }
+                    else
+                    {
+                        bool andOp = predicateTask.IsAnd();
+                        if (andOp)
+                            lastCombineValue = lastCombineValue && taskBoolean;
+                        else
+                            lastCombineValue = lastCombineValue || taskBoolean;
+                    }
+                }
+            }
+
+            return lastCombineValue;
         }
 
         public EBTStatus exec(Agent pAgent)
@@ -210,6 +295,19 @@ namespace behavior
             return this.m_parent;
         }
 
+        bool getBooleanFromStatus(EBTStatus status)
+        {
+            if (status == EBTStatus.BT_FAILURE)
+                return false;
+            else if (status == EBTStatus.BT_SUCCESS)
+                return true;
+            else
+            {
+                Debug.LogError("Predicate can not return RUNNING status!");
+                return false;
+            }
+        }
+
 
         ///return true if it is continuing running for the next tick
         /**
@@ -231,6 +329,23 @@ namespace behavior
         public virtual bool NeedRestart()
         {
             return false;
+        }
+
+        /**
+        return false if the event handling  needs to be stopped
+        return true, the event hanlding will be checked furtherly
+        */
+        public virtual bool onevent(Agent pAgent, string eventName)
+        {
+            if (this.m_status == EBTStatus.BT_RUNNING && this.m_node.HasEvents())
+            {
+                if (!this.CheckEvents(eventName, pAgent))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         protected virtual bool onenter(Agent pAgent)
@@ -774,6 +889,33 @@ namespace behavior
             }
 
             return status;
+        }
+
+        /**
+        return false if the event handling  needs to be stopped
+        return true, the event hanlding will be checked furtherly
+        */
+        public override bool onevent(Agent pAgent, string eventName)
+        {
+            if (this.m_node.HasEvents())
+            {
+                bool bGoOn = this.m_root.onevent(pAgent, eventName);
+
+                if (bGoOn)
+                {
+                    if (this.m_status == EBTStatus.BT_RUNNING && this.m_node.HasEvents())
+                    {
+                        if (!this.CheckEvents(eventName, pAgent))
+                        {
+                            return false;
+                        }
+                    }
+
+                    return false;
+                }
+            }
+
+            return true;
         }
 
     }

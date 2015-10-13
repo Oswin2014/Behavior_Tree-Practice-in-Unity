@@ -3,7 +3,7 @@ using System.Collections;
 
 
 
-public class GameActor : behavior.Agent
+public class GameActor : behaviac.Agent
 {
 
     public bool aiEnabled = true;

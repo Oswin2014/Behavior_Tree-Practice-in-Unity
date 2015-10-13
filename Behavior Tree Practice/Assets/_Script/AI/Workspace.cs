@@ -1,10 +1,165 @@
 ﻿
 using System;
+using System.IO;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Security;
+using Mono.Xml;
+using UnityEngine;
 
-namespace behavior
+namespace behaviac
 {
-    
+
+    #region Config
+    public static class Config
+    {
+        readonly private static bool ms_bIsDesktopPlayer = (Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.OSXPlayer);
+        readonly private static bool ms_bIsDesktopEditor = (Application.platform == RuntimePlatform.WindowsEditor || Application.platform == RuntimePlatform.OSXPlayer);
+
+        static bool ms_bDebugging = false;
+        public static bool IsDebugging
+        {
+            get
+            {
+                return ms_bDebugging;
+            }
+            set
+            {
+#if !BEHAVIAC_RELEASE
+                ms_bDebugging = value;
+#else
+				if (ms_bDebugging)
+				{
+					behaviac.Debug.LogWarning("Debugging can't be enabled on Release! please don't define BEHAVIAC_RELEASE to enable it!\n");
+				}
+#endif
+            }
+        }
+
+        static bool ms_bProfiling = false;
+        public static bool IsProfiling
+        {
+            get
+            {
+                return ms_bProfiling;
+            }
+            set
+            {
+#if !BEHAVIAC_RELEASE
+                ms_bProfiling = value;
+#else
+				if (ms_bProfiling)
+				{
+					behaviac.Debug.LogWarning("Profiling can't be enabled on Release! please don't define BEHAVIAC_RELEASE to enable it!\n");
+				}
+#endif
+            }
+        }
+
+        public static bool IsDesktopPlayer
+        {
+            get
+            {
+                return ms_bIsDesktopPlayer;
+            }
+        }
+
+        public static bool IsDesktopEditor
+        {
+            get
+            {
+                return ms_bIsDesktopEditor;
+            }
+        }
+
+        public static bool IsDesktop
+        {
+            get
+            {
+                return ms_bIsDesktopPlayer || ms_bIsDesktopEditor;
+            }
+        }
+
+        public static bool IsLoggingOrSocketing
+        {
+            get
+            {
+                return IsLogging || IsSocketing;
+            }
+        }
+
+#if !BEHAVIAC_RELEASE
+        private static bool ms_bIsLogging = false;
+#else
+		private static bool ms_bIsLogging = false;
+#endif
+        ///it is disable on pc by default
+        public static bool IsLogging
+        {
+            get
+            {
+                //logging is only enabled on pc platform, it is disabled on android, ios, etc.
+                return IsDesktop && ms_bIsLogging;
+            }
+            set
+            {
+#if !BEHAVIAC_RELEASE
+                ms_bIsLogging = value;
+#else
+				if (ms_bIsLogging)
+				{
+					behaviac.Debug.LogWarning("Logging can't be enabled on Release! please don't define BEHAVIAC_RELEASE to enable it!\n");
+				}
+#endif
+            }
+        }
+
+#if !BEHAVIAC_RELEASE
+        private static bool ms_bIsSocketing = IsDesktop;
+#else
+		private static bool ms_bIsSocketing = false;
+#endif
+
+        //it is enabled on pc by default
+        public static bool IsSocketing
+        {
+            get
+            {
+                return ms_bIsSocketing;
+            }
+            set
+            {
+#if !BEHAVIAC_RELEASE
+                ms_bIsSocketing = value;
+#else
+				if (ms_bIsLogging)
+				{
+					behaviac.Debug.LogWarning("Socketing can't be enabled on Release! please don't define BEHAVIAC_RELEASE to enable it!\n");
+				}
+#endif
+            }
+        }
+
+        static bool ms_bIsSuppressingNonPublicWarning;
+        /// <summary>
+        /// Gets or sets a value indicating is supressing non public warning.
+        /// </summary>
+        /// <value><c>true</c> if is supressing non public warning; otherwise, <c>false</c>.</value>
+        public static bool IsSuppressingNonPublicWarning
+        {
+            get
+            {
+                return ms_bIsSuppressingNonPublicWarning;
+            }
+            set
+            {
+                ms_bIsSuppressingNonPublicWarning = value;
+            }
+        }
+
+    }
+    #endregion
+
     public static class Workspace
     {
 
@@ -65,8 +220,13 @@ namespace behavior
             }
         }
 
+        private static Dictionary<string, Type> ms_behaviorNodeTypes;
+        
+		static Dictionary<CStringID, int> m_actions_count = new Dictionary<CStringID, int>();
 
-
+#if !BEHAVIAC_RELEASE
+        private static string ms_workspaceExportPathAbs;
+#endif
 
 
         /**
@@ -111,7 +271,19 @@ namespace behavior
 
             return null;
         }
-        
+
+        public static BehaviorNode CreateBehaviorNode(string className)
+        {
+            if (ms_behaviorNodeTypes.ContainsKey(className))
+            {
+                Type type = ms_behaviorNodeTypes[className];
+                object p = Activator.CreateInstance(type);
+                return p as BehaviorNode;
+            }
+
+            return null;
+        }
+
         public static bool IsValidPath(string relativePath)
         {
             Debug.Check(!string.IsNullOrEmpty(relativePath));
@@ -211,10 +383,86 @@ namespace behavior
                     BehaviorTrees.Remove(relativePath);
                 }
 
-                behavior.Debug.LogWarning(string.Format("BehaviorTree {0} not loaded!", fullPath));
+                behaviac.Debug.LogWarning(string.Format("BehaviorTree {0} not loaded!", fullPath));
             }
 
             return true;
+        }
+
+        static bool LoadWorkspaceSetting(string file, string ext, ref string workspaceFile)
+        {
+            try
+            {
+                byte[] pBuffer = ReadFileToBuffer(file, ext);
+                if (pBuffer != null)
+                {
+                    string xml = System.Text.Encoding.UTF8.GetString(pBuffer);
+                    SecurityParser xmlDoc = new SecurityParser();
+                    xmlDoc.LoadXml(xml);
+
+                    SecurityElement rootNode = xmlDoc.ToXml();
+                    if (rootNode.Tag == "workspace")
+                    {
+                        workspaceFile = rootNode.Attribute("path");
+                        return true;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                string errorInfo = string.Format("Load Workspace {0} Error : {1}", file, e.Message);
+                behaviac.Debug.LogError(errorInfo);
+            }
+
+            return false;
+        }
+
+        public static void LoadWorkspaceAbsolutePath()
+        {
+#if !BEHAVIAC_RELEASE
+            if (Config.IsLoggingOrSocketing)
+            {
+                //relative to exe's current path
+                string workspaceExportPath = WorkspaceExportPath;
+
+                //workspaceExportPath is the path to the export:
+                //like: ..\example\spaceship\data\bt\exported
+                string fullPath = Path.Combine(workspaceExportPath, "behaviors.dbg");
+
+                string workspaceFilePathRelative = "";
+                bool bOk = LoadWorkspaceSetting(fullPath, ".xml", ref workspaceFilePathRelative);
+                if (bOk)
+                {
+                    //workspaceFilePathRelative stored in behaviors.dbg.xml is the path relative to export
+                    //convert it to the full path
+                    if (!Path.IsPathRooted(workspaceExportPath))
+                    {
+                        ms_workspaceExportPathAbs = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
+                        {
+                            int p = ms_workspaceExportPathAbs.LastIndexOf("Assets", StringComparison.OrdinalIgnoreCase);
+                            if (p != -1)
+                            {
+                                ms_workspaceExportPathAbs = ms_workspaceExportPathAbs.Substring(0, p);
+                            }
+                        }
+
+                        ms_workspaceExportPathAbs = Path.Combine(ms_workspaceExportPathAbs, workspaceExportPath);
+                    }
+                    else
+                    {
+                        ms_workspaceExportPathAbs = workspaceExportPath;
+                    }
+
+                    ms_workspaceExportPathAbs = ms_workspaceExportPathAbs.Replace('\\', '/');
+
+                    m_workspaceFileAbs = Path.Combine(ms_workspaceExportPathAbs, workspaceFilePathRelative);
+                }
+                else
+                {
+                }
+            }
+#endif
         }
 
         public static void RecordBTAgentMapping(string relativePath, Agent agent)
@@ -245,6 +493,37 @@ namespace behavior
             return pBuffer;
         }
 
+        public static void RegisterBehaviorNode()
+        {
+            //Assembly a = Assembly.GetExecutingAssembly();
+            Assembly a = Assembly.GetCallingAssembly();
+
+            RegisterBehaviorNode(a);
+        }
+
+        public static void RegisterBehaviorNode(Assembly a)
+        {
+            //Debug.Check(ms_behaviorNodeTypes != null);
+            if (ms_behaviorNodeTypes == null)
+            {
+                ms_behaviorNodeTypes = new Dictionary<string, Type>();
+            }
+
+            //List<Type> agentTypes = new List<Type>();
+            Type[] types = a.GetTypes();
+            foreach (Type type in types)
+            {
+                if (type.IsSubclassOf(typeof(behaviac.BehaviorNode)) && !type.IsAbstract)
+                {
+                    //Attribute[] attributes = (Attribute[])type.GetCustomAttributes(typeof(Behaviac.Design.BehaviorNodeDescAttribute), false);
+                    //if (attributes.Length > 0)
+                    {
+                        ms_behaviorNodeTypes[type.Name] = type;
+                    }
+                }
+            }
+        }
+
 
         public static bool SetWorkspaceSettings(string workspaceExportPath, EFileFormat format)
         {
@@ -261,7 +540,88 @@ namespace behavior
 
             fileFormat_ = format;
 
+            if (string.IsNullOrEmpty(ms_workspaceExportPath))
+            {
+                behaviac.Debug.LogError("No workspace file is specified!");
+                behaviac.Debug.Check(false);
+
+                return false;
+            }
+
+            LoadWorkspaceAbsolutePath();
+
+            ms_deltaFrames = 1;
+
+            //////////////////////////////////////////////////////////
+            //only register metas and others at the 1st time
+            if (bFirstTime)
+            {
+                //behaviac.Details.RegisterCompareValue();
+                //behaviac.Details.RegisterComputeValue();
+                behaviac.Workspace.RegisterBehaviorNode();
+                //behaviac.Workspace.RegisterMetas();
+            }
+
             return true;
+        }
+        
+		public static int UpdateActionCount(string actionString)
+		{
+			lock (m_actions_count)
+			{
+				int count = 1;
+				CStringID actionId = new CStringID(actionString);
+				if (!m_actions_count.ContainsKey(actionId))
+				{
+					m_actions_count[actionId] = count;
+				}
+				else
+				{
+					count = m_actions_count[actionId];
+					count++;
+					m_actions_count[actionId] = count;
+				}
+				
+				return count;
+			}
+		}
+		
+		public static int GetActionCount(string actionString)
+		{
+			lock (m_actions_count)
+			{
+				int count = 0;
+				CStringID actionId = new CStringID(actionString);
+				if (m_actions_count.ContainsKey(actionId))
+				{
+					count = m_actions_count[actionId];
+				}
+				
+				return count;
+			}
+		}
+
+        static string m_workspaceFileAbs = "";
+        public static string GetWorkspaceAbsolutePath()
+        {
+            return m_workspaceFileAbs;
+        }
+
+        private static int ms_deltaFrames;
+
+        public static void SetDeltaFrames(int deltaFrames)
+        {
+            ms_deltaFrames = deltaFrames;
+        }
+
+        public static int GetDeltaFrames()
+        {
+            return ms_deltaFrames;
+        }
+
+        public static Dictionary<string, BehaviorTree> GetBehaviorTrees()
+        {
+            return ms_behaviortrees;
         }
 
 

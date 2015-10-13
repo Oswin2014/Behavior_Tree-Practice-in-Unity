@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 
 
-public class GameManager : behavior.Agent
+public class GameManager : behaviac.Agent
 {
 
     protected GameObject mGo;
@@ -44,8 +44,8 @@ public class GameManager : behavior.Agent
     void Awake()
     {
         string btExportPath = WorkspaceExportedPath;
-        behavior.Workspace.EFileFormat btFileFormat = behavior.Workspace.EFileFormat.EFF_xml;
-        behavior.Workspace.SetWorkspaceSettings(btExportPath, btFileFormat);            
+        behaviac.Workspace.EFileFormat btFileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
+        behaviac.Workspace.SetWorkspaceSettings(btExportPath, btFileFormat);            
 
         //find and add player
         Player[] players = cachedGameObject.GetComponentsInChildren<Player>();

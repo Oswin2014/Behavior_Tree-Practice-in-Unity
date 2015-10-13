@@ -1,0 +1,145 @@
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+
+namespace behaviac
+{
+    public class Assignment : BehaviorNode
+    {
+        public Assignment()
+        {
+		}
+        ~Assignment()
+        {
+            m_opl = null;
+            m_opr = null;
+            m_opr_m = null;
+        }
+
+        protected override void load(int version, string agentType, List<property_t> properties)
+        {
+            base.load(version, agentType, properties);
+
+            string propertyName = null;
+
+            foreach (property_t p in properties)
+            {
+                if (p.name == "Opl")
+                {
+                    this.m_opl = Condition.LoadLeft(p.value, ref propertyName, null);
+                }
+                else if (p.name == "Opr")
+                {
+                    int pParenthesis = p.value.IndexOf('(');
+                    if (pParenthesis == -1)
+                    {
+                        string typeName = null;
+                        this.m_opr = Condition.LoadRight(p.value, propertyName, ref typeName);
+                    }
+                    else
+                    {
+                        //method
+                        this.m_opr_m = Action.LoadMethod(p.value);
+                    }
+                }
+                else
+                {
+                    //Debug.Check(0, "unrecognised property %s", p.name);
+                }
+            }
+        }
+
+        public static bool EvaluteAssignment(Agent pAgent, Property opl, Property opr, behaviac.CMethodBase opr_m)
+        {
+            bool bValid = false;
+
+            if (opr_m != null)
+            {
+                object returnValue = opr_m.Invoke(pAgent);
+
+                Agent pParentOpl = opl.GetParentAgent(pAgent);
+                opl.SetValue(pParentOpl, returnValue);
+
+                bValid = true;
+            }
+            else if (opr != null && opl != null)
+            {
+                Agent pParentL = opl.GetParentAgent(pAgent);
+                Agent pParentR = opr.GetParentAgent(pAgent);
+
+                opl.SetFrom(pParentR, opr, pParentL);
+
+                bValid = true;
+            }
+            else
+            {
+                //Debug.Check(false);
+            }
+
+            return bValid;
+        }
+
+        public override bool IsValid(Agent pAgent, BehaviorTask pTask)
+        {
+            if (!(pTask.GetNode() is Assignment))
+            {
+                return false;
+            }
+
+            return base.IsValid(pAgent, pTask);
+        }
+
+        protected override BehaviorTask createTask()
+        {
+            return new AssignmentTask();
+        }
+
+        protected Property m_opl;
+        protected Property m_opr;
+        protected CMethodBase m_opr_m;
+
+        class AssignmentTask : LeafTask
+        {
+            public AssignmentTask()
+            { }
+
+            ~AssignmentTask()
+            {
+
+            }
+
+            protected override bool isContinueTicking()
+            {
+                return false;
+            }
+
+            protected override bool onenter(Agent pAgent)
+            {
+                return true;
+            }
+            protected override void onexit(Agent pAgent, EBTStatus s)
+            {
+            }
+
+            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            {
+                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+
+                Debug.Check(this.GetNode() is Assignment);
+                Assignment pAssignmentNode = (Assignment)(this.GetNode());
+
+                EBTStatus result = EBTStatus.BT_SUCCESS;
+                bool bValid = Assignment.EvaluteAssignment(pAgent, pAssignmentNode.m_opl, pAssignmentNode.m_opr, pAssignmentNode.m_opr_m);
+                if (!bValid)
+                {
+                    result = pAssignmentNode.update_impl(pAgent, childStatus);
+                }
+
+                return result;
+            }
+
+
+        }
+    }
+}
