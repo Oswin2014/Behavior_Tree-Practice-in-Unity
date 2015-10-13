@@ -12,39 +12,45 @@
             <Connector Identifier="GenericChildren">
               <Node Class="PluginBehaviac.Nodes.Action" Enable="true" HasOwnPrefabData="false" Id="10" Method="&quot;&quot;" PreconditionFailResult="BT_FAILURE" PrefabName="" PrefabNodeId="-1" ResultFunctor="&quot;&quot;" ResultOption="BT_INVALID" Version="1">
                 <Comment Background="Gray" Text="Hit-&gt;wait for hit time" />
-                <Attachment Class="PluginBehaviac.Events.Predicate" BinaryOperator="And" Id="1" Operator="Equal" Opl="" Opr="&quot;&quot;" PrefabAttachmentId="-1" />
+                <Attachment Class="PluginBehaviac.Events.Predicate" BinaryOperator="And" Id="1" Operator="Equal" Opl="&quot;&quot;" Opr="&quot;&quot;" PrefabAttachmentId="-1" />
               </Node>
               <Node Class="PluginBehaviac.Nodes.Selector" Enable="true" HasOwnPrefabData="false" Id="2" PrefabName="" PrefabNodeId="-1" Version="1">
                 <Comment Background="Gray" Text="In attack range -&gt; Attack" />
-                <Attachment Class="PluginBehaviac.Events.Predicate" BinaryOperator="And" Id="13" Operator="Equal" Opl="" Opr="&quot;&quot;" PrefabAttachmentId="-1" />
+                <Attachment Class="PluginBehaviac.Events.Predicate" BinaryOperator="And" Id="13" Operator="Equal" Opl="&quot;&quot;" Opr="&quot;&quot;" PrefabAttachmentId="-1" />
                 <Connector Identifier="GenericChildren">
                   <Node Class="PluginBehaviac.Nodes.Action" Enable="true" HasOwnPrefabData="false" Id="14" Method="&quot;&quot;" PreconditionFailResult="BT_FAILURE" PrefabName="" PrefabNodeId="-1" ResultFunctor="&quot;&quot;" ResultOption="BT_INVALID" Version="1">
                     <Comment Background="Gray" Text="Target attacking -&gt; Can teleport -&gt; Teleport" />
-                    <Attachment Class="PluginBehaviac.Events.Predicate" BinaryOperator="And" Id="15" Operator="Equal" Opl="" Opr="&quot;&quot;" PrefabAttachmentId="-1" />
-                    <Attachment Class="PluginBehaviac.Events.Predicate" BinaryOperator="And" Id="16" Operator="Equal" Opl="" Opr="&quot;&quot;" PrefabAttachmentId="-1" />
-                  </Node>
-                  <Node Class="PluginBehaviac.Nodes.Action" Enable="true" HasOwnPrefabData="false" Id="4" Method="&quot;&quot;" PreconditionFailResult="BT_FAILURE" PrefabName="" PrefabNodeId="-1" ResultFunctor="&quot;&quot;" ResultOption="BT_INVALID" Version="1">
-                    <Comment Background="Gray" Text="Avatar skill" />
+                    <Attachment Class="PluginBehaviac.Events.Predicate" BinaryOperator="And" Id="15" Operator="Equal" Opl="&quot;&quot;" Opr="&quot;&quot;" PrefabAttachmentId="-1" />
+                    <Attachment Class="PluginBehaviac.Events.Predicate" BinaryOperator="And" Id="16" Operator="Equal" Opl="&quot;&quot;" Opr="&quot;&quot;" PrefabAttachmentId="-1" />
                   </Node>
                   <Node Class="PluginBehaviac.Nodes.Action" Enable="true" HasOwnPrefabData="false" Id="5" Method="&quot;&quot;" PreconditionFailResult="BT_FAILURE" PrefabName="" PrefabNodeId="-1" ResultFunctor="&quot;&quot;" ResultOption="BT_INVALID" Version="1">
                     <Comment Background="Gray" Text="normal" />
                   </Node>
                 </Connector>
               </Node>
-              <Node Class="PluginBehaviac.Nodes.Sequence" Enable="true" HasOwnPrefabData="false" Id="3" PrefabName="" PrefabNodeId="-1" Version="1">
-                <Comment Background="Gray" Text="RunToTarget" />
+              <Node Class="PluginBehaviac.Nodes.Selector" Enable="true" HasOwnPrefabData="false" Id="11" PrefabName="" PrefabNodeId="-1" Version="1">
+                <Comment Background="Gray" Text="navigate" />
                 <Connector Identifier="GenericChildren">
-                  <Node Class="PluginBehaviac.Nodes.Action" Enable="true" HasOwnPrefabData="false" Id="6" Method="&quot;&quot;" PreconditionFailResult="BT_FAILURE" PrefabName="" PrefabNodeId="-1" ResultFunctor="&quot;&quot;" ResultOption="BT_INVALID" Version="1">
-                    <Comment Background="Gray" Text="detect target" />
-                  </Node>
-                  <Node Class="PluginBehaviac.Nodes.Action" Enable="true" HasOwnPrefabData="false" Id="7" Method="&quot;&quot;" PreconditionFailResult="BT_FAILURE" PrefabName="" PrefabNodeId="-1" ResultFunctor="&quot;&quot;" ResultOption="BT_INVALID" Version="1">
-                    <Comment Background="Gray" Text="find path" />
-                  </Node>
-                  <Node Class="PluginBehaviac.Nodes.Selector" Enable="true" HasOwnPrefabData="false" Id="11" PrefabName="" PrefabNodeId="-1" Version="1">
-                    <Comment Background="Gray" Text="navigate" />
+                  <Node Class="PluginBehaviac.Nodes.Selector" Enable="true" HasOwnPrefabData="false" Id="4" PrefabName="" PrefabNodeId="-1" Version="1">
+                    <Comment Background="NoColor" Text="" />
                     <Connector Identifier="GenericChildren">
+                      <Node Class="PluginBehaviac.Nodes.Action" Enable="true" HasOwnPrefabData="false" Id="17" Method="&quot;&quot;" PreconditionFailResult="BT_FAILURE" PrefabName="" PrefabNodeId="-1" ResultFunctor="&quot;&quot;" ResultOption="BT_INVALID" Version="1">
+                        <Comment Background="Gray" Text="enemy in teleport range -&gt; around but not now dir" />
+                        <Attachment Class="PluginBehaviac.Events.Predicate" BinaryOperator="And" Id="18" Operator="Equal" Opl="" Opr="&quot;&quot;" PrefabAttachmentId="-1" />
+                      </Node>
                       <Node Class="PluginBehaviac.Nodes.Action" Enable="true" HasOwnPrefabData="false" Id="8" Method="&quot;&quot;" PreconditionFailResult="BT_FAILURE" PrefabName="" PrefabNodeId="-1" ResultFunctor="&quot;&quot;" ResultOption="BT_INVALID" Version="1">
                         <Comment Background="Gray" Text="teleport" />
+                      </Node>
+                    </Connector>
+                  </Node>
+                  <Node Class="PluginBehaviac.Nodes.Sequence" Enable="true" HasOwnPrefabData="false" Id="3" PrefabName="" PrefabNodeId="-1" Version="1">
+                    <Comment Background="Gray" Text="RunToTarget" />
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="PluginBehaviac.Nodes.Action" Enable="true" HasOwnPrefabData="false" Id="6" Method="&quot;&quot;" PreconditionFailResult="BT_FAILURE" PrefabName="" PrefabNodeId="-1" ResultFunctor="&quot;&quot;" ResultOption="BT_INVALID" Version="1">
+                        <Comment Background="Gray" Text="detect target" />
+                      </Node>
+                      <Node Class="PluginBehaviac.Nodes.Action" Enable="true" HasOwnPrefabData="false" Id="7" Method="&quot;&quot;" PreconditionFailResult="BT_FAILURE" PrefabName="" PrefabNodeId="-1" ResultFunctor="&quot;&quot;" ResultOption="BT_INVALID" Version="1">
+                        <Comment Background="Gray" Text="find path" />
                       </Node>
                       <Node Class="PluginBehaviac.Nodes.Action" Enable="true" HasOwnPrefabData="false" Id="12" Method="&quot;&quot;" PreconditionFailResult="BT_FAILURE" PrefabName="" PrefabNodeId="-1" ResultFunctor="&quot;&quot;" ResultOption="BT_INVALID" Version="1">
                         <Comment Background="Gray" Text="run" />
