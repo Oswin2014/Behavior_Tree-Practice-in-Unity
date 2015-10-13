@@ -10,6 +10,15 @@ namespace behaviac
         {
         }
 
+        public override bool IsValid(Agent pAgent, BehaviorTask pTask)
+        {
+            if (!(pTask.GetNode() is ConditionBase))
+            {
+                return false;
+            }
+
+            return base.IsValid(pAgent, pTask);
+        }
     }
 
     

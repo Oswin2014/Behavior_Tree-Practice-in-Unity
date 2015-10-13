@@ -74,6 +74,32 @@ namespace behaviac
             return bResult;
         }
 
+        public bool Evaluate(Agent pAgent)
+        {
+            if (this.m_comparator != null)
+            {
+                bool bResult = Condition.DoCompare(pAgent, this.m_comparator, this.m_opl, this.m_opl_m, this.m_opr, null);
+
+                return bResult;
+            }
+            else
+            {
+                EBTStatus childStatus = EBTStatus.BT_INVALID;
+                EBTStatus result = this.update_impl(pAgent, childStatus);
+                return result == EBTStatus.BT_SUCCESS;
+            }
+        }
+
+        public override bool IsValid(Agent pAgent, BehaviorTask pTask)
+        {
+            if (!(pTask.GetNode() is Condition))
+            {
+                return false;
+            }
+
+            return base.IsValid(pAgent, pTask);
+        }
+
         public static Property LoadProperty(string value)
         {
             return null;
@@ -148,6 +174,49 @@ namespace behaviac
             return opr;
         }
 
+        protected override void load(int version, string agentType, List<property_t> properties)
+        {
+            base.load(version, agentType, properties);
+
+            string typeName = null;
+            string propertyName = null;
+            string comparatorName = null;
+
+            foreach (property_t p in properties)
+            {
+                if (p.name == "Operator")
+                {
+                    comparatorName = p.value;
+                }
+                else if (p.name == "Opl")
+                {
+                    int pParenthesis = p.value.IndexOf('(');
+                    if (pParenthesis == -1)
+                    {
+                        this.m_opl = LoadLeft(p.value, ref propertyName, null);
+                    }
+                    else
+                    {
+                        //method
+                        this.m_opl_m = Action.LoadMethod(p.value);
+                    }
+                }
+                else if (p.name == "Opr")
+                {
+                    this.m_opr = Condition.LoadRight(p.value, propertyName, ref typeName);
+                }
+                else
+                {
+                    //Debug.Check(0, "unrecognised property %s", p.name);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(comparatorName) && (this.m_opl != null || this.m_opl_m != null) && this.m_opr != null)
+            {
+                this.m_comparator = Condition.Create(typeName, comparatorName, this.m_opl, this.m_opr);
+            }
+        }
+
         public static Property ParseProperty(string value, ref string typeName)
         {
             Property opr = null;
@@ -163,6 +232,27 @@ namespace behaviac
             ~ConditionTask()
             {
             }
+
+            protected override bool onenter(Agent pAgent)
+            {
+                return true;
+            }
+            protected override void onexit(Agent pAgent, EBTStatus s)
+            {
+            }
+
+            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            {
+                Debug.Check(childStatus == EBTStatus.BT_RUNNING);
+
+                Debug.Check(this.GetNode() is Condition);
+                Condition pConditionNode = (Condition)(this.GetNode());
+
+                bool ret = pConditionNode.Evaluate(pAgent);
+
+                return ret ? EBTStatus.BT_SUCCESS : EBTStatus.BT_FAILURE;
+            }
+
         }
 
     }
