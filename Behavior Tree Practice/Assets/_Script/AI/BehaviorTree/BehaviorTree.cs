@@ -256,6 +256,9 @@ namespace behaviac
 
 		protected void load_properties_pars_attachments_children(bool bNode, int version, string agentType, SecurityElement node)
         {
+#if !BEHAVIAC_RELEASE
+            SetAgentType(agentType);
+#endif//#ifdef _DEBUG
 
             bool bHasEvents = this.HasEvents();
 

@@ -1,0 +1,17 @@
+
+>>ExportMetas路径需要自己创建
+
+"Behavior Tree Practice\Assets\BTWorkspace\xmlmeta"
+
+>>游戏逻辑相关的Agent子类需要在声明前加TypeMetaInfo标记
+
+[behaviac.TypeMetaInfo("GameActor", "GameActor -> Agent")]
+public class GameActor : behaviac.Agent
+
+>>BehaviacDesigner中BT 根树需要指定"Agent Type"才可以访问相应类中的信息(方法/属性)
+如不指定则只能访问注册过的类: behaviac.Agent.RegisterName<GameManager>("GameManager");
+
+
+
+
+

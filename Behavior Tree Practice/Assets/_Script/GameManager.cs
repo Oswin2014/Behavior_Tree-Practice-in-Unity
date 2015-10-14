@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 
 
+[behaviac.TypeMetaInfo("GameManager", "GameManager -> Agent")]
 public class GameManager : behaviac.Agent
 {
 
@@ -39,13 +40,33 @@ public class GameManager : behaviac.Agent
         }
     }
 
+    public static string WorkspacePath
+    {
+        get
+        {
+            string path = "";
+            if (Application.platform == RuntimePlatform.WindowsEditor)
+            {
+                path = Application.dataPath + "/BTWorkspace";
+            }
+            else if (Application.platform == RuntimePlatform.WindowsPlayer)
+            {
+                path = Application.dataPath + "/BTWorkspace";
+            }
+            else
+            {
+                behaviac.Debug.LogWarning("only for dev!");
+            }
+
+            return path;
+        }
+    }
+
 
     // Use this for initialization
     void Awake()
     {
-        string btExportPath = WorkspaceExportedPath;
-        behaviac.Workspace.EFileFormat btFileFormat = behaviac.Workspace.EFileFormat.EFF_xml;
-        behaviac.Workspace.SetWorkspaceSettings(btExportPath, btFileFormat);            
+        BehaviacSystem.instance.init();
 
         //find and add player
         Player[] players = cachedGameObject.GetComponentsInChildren<Player>();
@@ -65,4 +86,6 @@ public class GameManager : behaviac.Agent
             mPlayerList[i].tick();
         }
     }
+
+
 }

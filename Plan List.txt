@@ -31,14 +31,14 @@ http://code.google.com/p/daggame/source/browse/#svn/trunk/Code/src/com/game/AI
 --TencentOpen/behaviac(integation)                                  -Almost
 --luzexi/Unity3DAIBehaviorTree(small part)                          -Almost
 --match-rv(easy)                                                    -Almost
---æš—é»‘æˆ˜ç¥(confuse)
+--°µºÚÕ½Éñ(confuse)
 
 >>how to config/edit behavior logic
 
 >>battle mode understand and summarize                              -||||||
 --match-rv
 --card2
---æš—é»‘æˆ˜ç¥
+--°µºÚÕ½Éñ
 --net sample project
 >>project design
 --ask for document
@@ -98,12 +98,12 @@ call Leaf pass parameters / share context variables with next leaf node or other
 --Random Selectors / Sequences
 the child nodes are processed is determined randomly
 used to add more unpredictability to an AI character in cases where there 
-isnâ€™t a clear preferable order of execution of possible courses of action
+isn¡¯t a clear preferable order of execution of possible courses of action
 
 >>Decorator Nodes
 --Succeeder
 where a failure is expected or anticipated
-but you donâ€™t want to abandon processing of a sequence that branch sits on
+but you don¡¯t want to abandon processing of a sequence that branch sits on
 
 --Repeater
 Repeaters may optionally run their children a set number of times before returning to their parent
@@ -505,17 +505,17 @@ Agent: static Dictionary<CStringID, CTagObjectDescriptor> Metas
 
 Event
 {
-	ä»»ä½•ä¸€ä¸ªBTéƒ½å¯ä»¥ä½œä¸ºäº‹ä»¶å­æ ‘(ç›´æ¥é™„åŠ åˆ°æŸæ ‘èŠ‚ç‚¹ä¸­), å‘ç”Ÿäº†æŸä¸ªäº‹ä»¶, é€šè¿‡Agent.FireEvent()è§¦å‘m_currentBT.onevent()
+	ÈÎºÎÒ»¸öBT¶¼¿ÉÒÔ×÷ÎªÊÂ¼ş×ÓÊ÷(Ö±½Ó¸½¼Óµ½Ä³Ê÷½ÚµãÖĞ), ·¢ÉúÁËÄ³¸öÊÂ¼ş, Í¨¹ıAgent.FireEvent()´¥·¢m_currentBT.onevent()
 }
 
 Predicate
 {
-	æ‰§è¡Œç›¸åº”äº‹ä»¶çš„é™„åŠ å…ˆå†³æ¡ä»¶
+	Ö´ĞĞÏàÓ¦ÊÂ¼şµÄ¸½¼ÓÏÈ¾öÌõ¼ş
 }
 
 Action
 {
-	æŒ‚äº‹ä»¶
+	¹ÒÊÂ¼ş
 }
 
 
@@ -576,29 +576,34 @@ BTreeMgr
 return true if it is continuing running for the next tick
 this virtual function is used for those nodes which will run continuously in the next tick
 so that the tree can record it to tick it directly in the next tick.
-å¦‚æœå½“å‰èŠ‚ç‚¹æ²¡æœ‰æ‰§è¡Œç»“æŸéœ€è¦å¤šæ¬¡æ‰§è¡Œ, ä¼šç›´æ¥è®°åˆ°çˆ¶èŠ‚ç‚¹(å‘ä¸Šé€’å½’å¯»æ‰¾åˆ°BranchTaskç±»å‹)ä¸­çš„m_currentTask
-ä¸‹ä¸€æ¬¡çˆ¶èŠ‚ç‚¹è¢«æ‰§è¡Œæ—¶ç›´æ¥æ‰§è¡Œm_currentTask
+Èç¹ûµ±Ç°½ÚµãÃ»ÓĞÖ´ĞĞ½áÊøĞèÒª¶à´ÎÖ´ĞĞ, »áÖ±½Ó¼Çµ½¸¸½Úµã(ÏòÉÏµİ¹éÑ°ÕÒµ½BranchTaskÀàĞÍ)ÖĞµÄm_currentTask
+ÏÂÒ»´Î¸¸½Úµã±»Ö´ĞĞÊ±Ö±½ÓÖ´ĞĞm_currentTask
 
 --Selectorloop.update()
---å¤„ç†è¢«å­èŠ‚ç‚¹ä¸­è§¦å‘çš„Eventæ‰“æ–­çš„æƒ…å†µ, åªæœ‰è¢«Eventæ‰“æ–­åæ¢å¤è°ƒç”¨BehaviorTreeTask.resume()
-æ‰ä¼šSetReturnStatus()(ä¸€èˆ¬m_returnStatus == BT_INVALID)
+--´¦Àí±»×Ó½ÚµãÖĞ´¥·¢µÄEvent´ò¶ÏµÄÇé¿ö, Ö»ÓĞ±»Event´ò¶Ïºó»Ö¸´µ÷ÓÃBehaviorTreeTask.resume()
+²Å»áSetReturnStatus()(Ò»°ãm_returnStatus == BT_INVALID)
 for (int i = 0; i < this.m_children.Count; ++i)
 EBTStatus returnStatus = pSubTree.GetReturnStatus();
 if (returnStatus != EBTStatus.BT_INVALID)
 {
     pSubTree.SetReturnStatus(EBTStatus.BT_INVALID);
-	//å¦‚æœå­èŠ‚ç‚¹è§¦å‘çš„Eventè¿”å›BT_SUCCESS, åˆ™ç›´æ¥è¿”å›BT_SUCCESS
+	//Èç¹û×Ó½Úµã´¥·¢µÄEvent·µ»ØBT_SUCCESS, ÔòÖ±½Ó·µ»ØBT_SUCCESS
     if (returnStatus == EBTStatus.BT_SUCCESS)
     {
         return EBTStatus.BT_SUCCESS;
     }
-	//å¦‚æœEventè¿”å›BT_FAILURE, åˆ™è·³è¿‡è¿™ä¸ªè§¦å‘Eventçš„å­èŠ‚ç‚¹,æ‰§è¡Œä¸‹ä¸€ä¸ªå­èŠ‚ç‚¹
+	//Èç¹ûEvent·µ»ØBT_FAILURE, ÔòÌø¹ıÕâ¸ö´¥·¢EventµÄ×Ó½Úµã,Ö´ĞĞÏÂÒ»¸ö×Ó½Úµã
     else if (returnStatus == EBTStatus.BT_FAILURE)
     {
         idx = i;
         break;
     }
 }
+
+Understand List:
+>>Workspace.ExportMetas (metaExportPath);
+>>Breakpoint
+
 
 ----------------------------------------------
 >match-rv
@@ -684,8 +689,8 @@ BTSequence : BTNode
 
 >>project design-------------------------------------
 
---avatar attack(é¾™å½±åˆ†èº«)
---teleport(ç¬ç§»)
+--avatar attack(ÁúÓ°·ÖÉí)
+--teleport(Ë²ÒÆ)
 --scene with black fog
  
 

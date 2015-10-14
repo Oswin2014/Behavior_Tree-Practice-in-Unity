@@ -4,7 +4,6 @@ using System.Collections;
 using System.Collections.Generic;
 
 
-
 namespace behaviac
 {
 
@@ -36,6 +35,9 @@ namespace behaviac
         protected BranchTask m_parent;
         protected List<AttachmentTask> m_attachments;
 
+        private int m_id;
+
+        private static EBTStatus ms_lastExitStatus_ = EBTStatus.BT_INVALID;
 
         static NodeHandler_t abort_handler_ = abort_handler;
         static NodeHandler_t reset_handler_ = reset_handler;
@@ -80,6 +82,11 @@ namespace behaviac
             }
 
             this.m_node = null;
+        }
+
+        public static void DestroyTask(BehaviorTask task)
+        {
+            //nothing
         }
 
         /**
@@ -167,8 +174,55 @@ namespace behaviac
             return lastCombineValue;
         }
 
+        //CheckBreakpoint should be after log of onenter/onexit/update, as it needs to flush msg to the client
+        private static void CHECK_BREAKPOINT(Agent pAgent, BehaviorTask b, string action, EActionResult actionResult)
+        {
+#if !BEHAVIAC_RELEASE
+            if (Config.IsLoggingOrSocketing)
+            {
+                string bpstr = GetTickInfo(pAgent, b, action);
+                if (!string.IsNullOrEmpty(bpstr))
+                {
+                    LogManager.Log(pAgent, bpstr, actionResult, LogMode.ELM_tick);
+                    if (Config.IsDebugging)
+                    {
+                        if (Workspace.CheckBreakpoint(pAgent, b, action, actionResult))
+                        {
+                            LogManager.Log(pAgent, bpstr, actionResult, LogMode.ELM_breaked);
+                            LogManager.Flush(pAgent);
+                            SocketUtils.Flush();
+
+                            _MY_BREAKPOINT_BREAK_(pAgent, bpstr, actionResult);
+
+                            LogManager.Log(pAgent, bpstr, actionResult, LogMode.ELM_continue);
+                            LogManager.Flush(pAgent);
+                            SocketUtils.Flush();
+                        }
+                    }
+                }
+            }
+#endif
+        }
+
+        private static void _MY_BREAKPOINT_BREAK_(Agent pAgent, string btMsg, EActionResult actionResult)
+        {
+#if !BEHAVIAC_RELEASE
+            if (Config.IsLoggingOrSocketing)
+            {
+                string actionResultStr = GetActionResultStr(actionResult);
+                string msg = string.Format("BehaviorTreeTask Breakpoints at: '{0}{1}'\n\nOk to continue.", btMsg, actionResultStr);
+
+                Workspace.RespondToBreak(msg, "BehaviorTreeTask Breakpoints");
+            }
+#endif
+        }
+
         public EBTStatus exec(Agent pAgent)
         {
+#if !BEHAVIAC_RELEASE
+            Debug.Check(this.m_node == null || this.m_node.IsValid(pAgent, this),
+                string.Format("Agent In BT:{0} while the Agent used for: {1}", this.m_node.GetAgentType(), pAgent.GetClassTypeName()));
+#endif//#if !BEHAVIAC_RELEASE
 
             bool bEnterResult = false;
             if (this.m_status == EBTStatus.BT_RUNNING)
@@ -200,6 +254,18 @@ namespace behaviac
 
             if(bEnterResult)
             {
+#if !BEHAVIAC_RELEASE
+                if (Config.IsLoggingOrSocketing)
+                {
+                    string btStr = BehaviorTask.GetTickInfo(pAgent, this, "update");
+                    //empty btStr is for internal BehaviorTreeTask
+                    if (!string.IsNullOrEmpty(btStr))
+                    {
+                        LogManager.Log(pAgent, btStr, EActionResult.EAR_none, LogMode.ELM_tick);
+                    }
+                }
+#endif
+
                 bool bEnded = false;
                 EBTStatus returnStatus = this.GetReturnStatus();
                 if (returnStatus == EBTStatus.BT_INVALID)
@@ -308,6 +374,95 @@ namespace behaviac
             }
         }
 
+        public string GetClassNameString()
+        {
+            if (this.m_node != null)
+            {
+                return this.m_node.GetClassNameString();
+            }
+
+            string subBT = "SubBT";
+            return subBT;
+        }
+
+        public int GetId()
+        {
+            return this.m_id;
+        }
+
+        public void SetId(int id)
+        {
+            this.m_id = id;
+        }
+
+        public static string GetTickInfo(Agent pAgent, BehaviorTask b, string action)
+        {
+#if !BEHAVIAC_RELEASE
+            if (Config.IsLoggingOrSocketing)
+            {
+                if (pAgent != null && pAgent.IsMasked())
+                {
+                    //BEHAVIAC_PROFILE("GetTickInfo", true);
+
+                    string bClassName = b.GetClassNameString();
+
+                    //filter out intermediate bt, whose class name is empty
+                    if (!string.IsNullOrEmpty(bClassName))
+                    {
+                        int nodeId = b.GetId();
+                        BehaviorTreeTask bt = pAgent != null ? pAgent.btgetcurrent() : null;
+
+                        //TestBehaviorGroup\scratch.xml.EventetTask[0]:enter
+                        string bpstr = "";
+                        if (bt != null)
+                        {
+                            string btName = bt.GetName();
+
+                            bpstr = string.Format("{0}.xml->", btName);
+                        }
+
+                        bpstr += string.Format("{0}[{1}]", bClassName, nodeId);
+
+                        if (!string.IsNullOrEmpty(action))
+                        {
+                            bpstr += string.Format(":{0}", action);
+                        }
+
+                        return bpstr;
+                    }
+                }
+            }
+#endif
+            return string.Empty;
+        }
+
+        private static string GetActionResultStr(EActionResult actionResult)
+        {
+#if !BEHAVIAC_RELEASE
+            if (Config.IsLoggingOrSocketing)
+            {
+                string actionResultStr = "";
+                if (actionResult == EActionResult.EAR_success)
+                {
+                    actionResultStr = " [success]";
+                }
+                else if (actionResult == EActionResult.EAR_failure)
+                {
+                    actionResultStr = " [failure]";
+                }
+                else
+                {
+                    //although actionResult can be EAR_none or EAR_all, but, as this is the real result of an action
+                    //it can only be success or failure
+                    Debug.Check(false);
+                }
+
+                return actionResultStr;
+            }
+#endif
+            return string.Empty;
+        }
+
 
         ///return true if it is continuing running for the next tick
         /**
@@ -320,6 +475,42 @@ namespace behaviac
         protected virtual bool isContinueTicking()
         {
             return false;
+        }
+
+        private void InstantiatePars(Agent pAgent)
+        {
+            BehaviorNode pNode = this.m_node;
+
+            //pNode could be 0 when the bt is a sub tree of parallel node/referenced bt, etc.
+            if (pNode != null && pNode.m_pars != null)
+            {
+                for (int i = 0; i < pNode.m_pars.Count; ++i)
+                {
+                    Property property_ = pNode.m_pars[i];
+
+                    //					if(pAgent != null && property_.GetVariableName() == "par0_char_0")
+                    //					{
+                    //						behaviac.Debug.Check(true);
+                    //					}
+
+                    property_.Instantiate(pAgent);
+                }
+            }
+        }
+
+        private void UnInstantiatePars(Agent pAgent)
+        {
+            BehaviorNode pNode = this.m_node;
+
+            //pNode could be 0 when the bt is a sub tree of parallel node/referenced bt, etc.
+            if (pNode != null && pNode.m_pars != null)
+            {
+                for (int i = 0; i < pNode.m_pars.Count; ++i)
+                {
+                    Property property_ = pNode.m_pars[i];
+                    property_.UnInstantiate(pAgent);
+                }
+            }
         }
 
         /**
@@ -359,17 +550,33 @@ namespace behaviac
 
         public bool onenter_action(Agent pAgent)
         {
+            //this needs to be before onenter
+            this.InstantiatePars(pAgent);
+
             bool bResult = this.onenter(pAgent);
 
             if (this.m_node != null)
             {
                 if (!((BehaviorNode)(this.m_node)).enteraction_impl(pAgent))
                 {
-                    //if (this.m_node.m_enterAction != null)
-                    //{
-                    //    this.m_node.m_enterAction.Invoke(pAgent);
-                    //}
+                    if (this.m_node.m_enterAction != null)
+                    {
+                        this.m_node.m_enterAction.Invoke(pAgent);
+                    }
                 }
+            }
+
+            if (!bResult)
+            {
+                this.UnInstantiatePars(pAgent);
+            }
+            else
+            {
+#if !BEHAVIAC_RELEASE
+                //BEHAVIAC_PROFILE_DEBUGBLOCK("Debug", true);
+
+                CHECK_BREAKPOINT(pAgent, this, "enter", bResult ? EActionResult.EAR_success : EActionResult.EAR_failure);
+#endif
             }
 
             return bResult;
@@ -384,18 +591,33 @@ namespace behaviac
             {
                 bool exitImpl = ((BehaviorNode)(this.m_node)).exitaction_impl(pAgent);
 
-                //if (exitImpl || this.m_node.m_exitAction != null)
-                //{
-                //    if (!exitImpl && this.m_node.m_exitAction != null)
-                //    {
-                //        ms_lastExitStatus_ = status;
-                //        this.m_node.m_exitAction.Invoke(pAgent);
-                //
-                //        ms_lastExitStatus_ = EBTStatus.BT_INVALID;
-                //    }
-                //}
+                if (exitImpl || this.m_node.m_exitAction != null)
+                {
+                    if (!exitImpl && this.m_node.m_exitAction != null)
+                    {
+                        ms_lastExitStatus_ = status;
+                        this.m_node.m_exitAction.Invoke(pAgent);
+                
+                        ms_lastExitStatus_ = EBTStatus.BT_INVALID;
+                    }
+                }
             }
 
+            this.UnInstantiatePars(pAgent);
+#if !BEHAVIAC_RELEASE
+            if (Config.IsLoggingOrSocketing)
+            {
+                //BEHAVIAC_PROFILE_DEBUGBLOCK("Debug", true);
+                if (status == EBTStatus.BT_SUCCESS)
+                {
+                    CHECK_BREAKPOINT(pAgent, this, "exit", EActionResult.EAR_success);
+                }
+                else
+                {
+                    CHECK_BREAKPOINT(pAgent, this, "exit", EActionResult.EAR_failure);
+                }
+            }
+#endif
         }
 
         public void abort(Agent pAgent)

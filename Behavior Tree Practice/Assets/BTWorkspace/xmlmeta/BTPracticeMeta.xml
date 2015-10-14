@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--EXPORTED BY TOOL, DON'T MODIFY IT!-->
+<metas version="2.0">
+  <types>
+    <enumtype Type="behaviac::EBTStatus" DisplayName="EBTStatus" Desc="EBTStatus">
+      <enum NativeValue="BT_INVALID" Value="BT_INVALID" DisplayName="BT_INVALID" Desc="BT_INVALID" />
+      <enum NativeValue="BT_SUCCESS" Value="BT_SUCCESS" DisplayName="BT_SUCCESS" Desc="BT_SUCCESS" />
+      <enum NativeValue="BT_FAILURE" Value="BT_FAILURE" DisplayName="BT_FAILURE" Desc="BT_FAILURE" />
+      <enum NativeValue="BT_RUNNING" Value="BT_RUNNING" DisplayName="BT_RUNNING" Desc="BT_RUNNING" />
+    </enumtype>
+  </types>
+  <agents>
+    <agent classfullname="behaviac::Agent" inherited="true" DisplayName="" Desc="" Namespace="behaviac" />
+    <agent classfullname="GameActor" base="behaviac::Agent" DisplayName="GameActor" Desc="GameActor -&gt; Agent" />
+    <agent classfullname="GameManager" base="behaviac::Agent" DisplayName="GameManager" Desc="GameManager -&gt; Agent" />
+    <agent classfullname="Player" base="GameActor" DisplayName="Player" Desc="Player -&gt; GameActor">
+      <Method Name="testBT" DisplayName="" Desc="" ReturnType="behaviac::EBTStatus" Class="Player" Public="true" />
+    </agent>
+  </agents>
+  <instances>
+    <instance name="GameManager" class="GameManager" DisplayName="GameManager" Desc="GameManager" />
+  </instances>
+</metas>

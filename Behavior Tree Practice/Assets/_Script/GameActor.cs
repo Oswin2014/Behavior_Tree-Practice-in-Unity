@@ -3,6 +3,7 @@ using System.Collections;
 
 
 
+[behaviac.TypeMetaInfo("GameActor", "GameActor -> Agent")]
 public class GameActor : behaviac.Agent
 {
 

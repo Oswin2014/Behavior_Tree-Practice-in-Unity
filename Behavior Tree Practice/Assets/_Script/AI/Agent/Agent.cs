@@ -230,6 +230,7 @@ namespace behaviac
         public int m_contextId;
 
         int m_id = -1;
+        bool m_bActive = true;
 
         static int ms_agent_index;
         static Dictionary<string, int> ms_agent_type_index;
@@ -280,6 +281,47 @@ namespace behaviac
         protected void Init()
         {
             Init_(this.m_contextId, this, this.m_priority, this.name);
+        }
+
+        protected void OnDestroy()
+        {
+            //this.UnSubsribeToNetwork();
+
+#if !BEHAVIAC_RELEASE
+            string agentClassName = this.GetClassTypeName();
+            string agentInstanceName = this.GetName();
+
+            string aName = string.Format("{0}#{1}", agentClassName, agentInstanceName);
+
+            ms_agents.Remove(aName);
+#endif
+
+            //if (this.m_contextId >= 0)
+            //{
+            //    Context c = Context.GetContext(this.m_contextId);
+            //    World pWorld = c.GetWorld(false);
+            //    if (!System.Object.ReferenceEquals(pWorld, null) && !System.Object.ReferenceEquals(pWorld, this))
+            //    {
+            //        pWorld.RemoveAgent(this);
+            //    }
+            //}
+
+            if (this.m_behaviorTreeTasks != null)
+            {
+                for (int i = 0; i < this.m_behaviorTreeTasks.Count; ++i)
+                {
+                    BehaviorTreeTask bt = this.m_behaviorTreeTasks[i];
+                    Workspace.DestroyBehaviorTreeTask(bt, this);
+                }
+
+                this.m_behaviorTreeTasks.Clear();
+                this.m_behaviorTreeTasks = null;
+            }
+            //if (this.m_eventInfos != null)
+            //{
+            //    this.m_eventInfos.Clear();
+            //    this.m_eventInfos = null;
+            //}
         }
 
 
@@ -423,7 +465,7 @@ namespace behaviac
 
 
 
-        public virtual EBTStatus btexec()
+        private EBTStatus btexec_()
         {
             if (this.m_currentBT != null)
             {
@@ -444,8 +486,8 @@ namespace behaviac
 
                         if (lastOne.triggerMode == TriggerMode.TM_Return)
                         {
-                            //string newBT = this.m_currentBT.GetName();
-                            //LogManager.Log(this, newBT, EActionResult.EAR_none, LogMode.ELM_return);
+                            string newBT = this.m_currentBT.GetName();
+                            LogManager.Log(this, newBT, EActionResult.EAR_none, LogMode.ELM_return);
 
                             if (!lastOne.triggerByEvent)
                             {
@@ -477,17 +519,35 @@ namespace behaviac
 
             return EBTStatus.BT_INVALID;
         }
-        
-        private EBTStatus btexec_()
+
+        public virtual EBTStatus btexec()
         {
-
-            EBTStatus s = this.btexec_();
-
-            while (this.m_referencetree && s == EBTStatus.BT_RUNNING)
+            if (this.m_bActive)
             {
-                this.m_referencetree = false;
-                s = this.btexec_();
+#if !BEHAVIAC_RELEASE
+                Debug.Check(this.m_debug_verify == kAGENT_DEBUG_VERY, "You did not call Agent.Init!");
+#endif//#if !BEHAVIAC_RELEASE
+
+                //this.UpdateVariableRegistry();
+
+
+                EBTStatus s = this.btexec_();
+
+                while (this.m_referencetree && s == EBTStatus.BT_RUNNING)
+                {
+                    this.m_referencetree = false;
+                    s = this.btexec_();
+                }
+
+                if (this.IsMasked())
+                {
+                    this.LogVariables(false);
+                }
+
+                return s;
             }
+
+            Profiler.EndSample();
 
             return EBTStatus.BT_INVALID;
         }
@@ -772,6 +832,13 @@ namespace behaviac
             return Names.ContainsKey(agentInstanceName);
         }
 
+        public static bool IsTypeRegisterd(string typeName)
+        {
+            CStringID typeId = new CStringID(typeName);
+
+            return ms_metas.ContainsKey(typeId);
+        }
+
         //return true if 'agentClassName' is an agent class name or agent derived class name
         //IsAgentClassName is different from IsRegistered that IsRegistered only returns true for those classes directly registered by 'Register'
         //IsAgentClassName also returns true for those base classes.
@@ -808,6 +875,14 @@ namespace behaviac
             return (this.m_idFlag & Agent.IdMask()) != 0;
         }
 
+        /**
+        @sa SetIdMask IsMasked
+        */
+        public void SetIdFlag(uint idMask)
+        {
+            this.m_idFlag = idMask;
+        }
+
         public static bool IsDerived(Agent pAgent, string agentType)
         {
             bool bIsDerived = false;
@@ -825,6 +900,16 @@ namespace behaviac
             }
 
             return bIsDerived;
+        }
+
+        public void LogVariables(bool bForce)
+        {
+#if !BEHAVIAC_RELEASE
+            if (Config.IsLoggingOrSocketing)
+            {
+                this.Variables.Log(this, bForce);
+            }
+#endif
         }
 
         /**
@@ -863,6 +948,61 @@ namespace behaviac
         void ResetChangedVariables()
         {
             this.Variables.Reset();
+        }
+
+        public static bool RegisterStaticClass(Type type, string displayName, string desc)
+        {
+            Debug.Check(Utils.IsStaticType(type));
+
+            string agentInstanceNameAny = type.FullName;
+
+            if (!Agent.Names.ContainsKey(agentInstanceNameAny))
+            {
+                Agent.Names[agentInstanceNameAny] = new AgentName_t(agentInstanceNameAny, agentInstanceNameAny, displayName, desc);
+                Utils.AddStaticClass(type);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        /**
+        A name can be bound to an instance. before a name is bound to an instance, that name has to be registered by 'RegisterName'
+
+        @param agentInstanceName
+        the specified name to be used to access an instance of type 'TAGENT' or its derivative.
+        if 'agentInstanceName' is 0, the class name of 'TAGENT' will be used to be registered.
+
+        @sa CreateInstance
+        */
+        public static bool RegisterName<TAGENT>(string agentInstanceName, string displayName, string desc) where TAGENT : Agent
+        {
+            string agentInstanceNameAny = agentInstanceName;
+            if (string.IsNullOrEmpty(agentInstanceNameAny))
+            {
+                agentInstanceNameAny = typeof(TAGENT).FullName;
+            }
+
+            if (!Agent.Names.ContainsKey(agentInstanceNameAny))
+            {
+                string className = typeof(TAGENT).FullName;
+                Agent.Names[agentInstanceNameAny] = new AgentName_t(agentInstanceNameAny, className, displayName, desc);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        public static bool RegisterName<TAGENT>(string agentInstanceName) where TAGENT : Agent
+        {
+            return Agent.RegisterName<TAGENT>(agentInstanceName, null, null);
+        }
+
+        public static bool RegisterName<TAGENT>() where TAGENT : Agent
+        {
+            return Agent.RegisterName<TAGENT>(null, null, null);
         }
 
         public void SetName(string instanceName)

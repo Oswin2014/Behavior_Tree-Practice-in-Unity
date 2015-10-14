@@ -1,4 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<workspace name="Behavior Tree Practice" xmlmetafolder="." folder="behaviors" export="exported">
-  <export />
+<workspace name="Behavior Tree Practice" xmlmetafolder="..\Assets\BTWorkspace\xmlmeta" folder="behaviors" export="exported">
+  <xmlmeta>BTPracticeMeta.xml</xmlmeta>
+  <export>
+    <bson>
+      <isexported>False</isexported>
+      <filename>generated_behaviors</filename>
+    </bson>
+    <cpp>
+      <isexported>False</isexported>
+      <filename>generated_behaviors</filename>
+    </cpp>
+    <cs>
+      <isexported>False</isexported>
+      <filename>generated_behaviors</filename>
+    </cs>
+  </export>
 </workspace>

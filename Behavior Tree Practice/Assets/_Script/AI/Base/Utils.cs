@@ -1,4 +1,8 @@
 ﻿
+#if !BEHAVIAC_RELEASE
+#define BEHAVIAC_DEBUG
+#endif
+
 using System;
 using System.Collections;
 using System.Collections.Generic;

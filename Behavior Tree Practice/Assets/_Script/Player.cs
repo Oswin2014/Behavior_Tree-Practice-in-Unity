@@ -3,6 +3,7 @@ using System.Collections;
 
 
 
+[behaviac.TypeMetaInfo("Player", "Player -> GameActor")]
 public class Player : GameActor
 {
 
@@ -11,6 +12,9 @@ public class Player : GameActor
     
 	public bool init()
     {
+        base.Init();
+        this.SetIdFlag(1);
+
         if (behaviorTree.Length > 0)
         {
             btloadResult = btload(behaviorTree, true);
@@ -28,6 +32,13 @@ public class Player : GameActor
 
         if (btloadResult && aiEnabled)
             btexec();
+    }
+
+    [behaviac.MethodMetaInfo()]
+    public behaviac.EBTStatus testBT()
+    {
+        Debug.Log("------testBT: " + name);
+        return behaviac.EBTStatus.BT_SUCCESS;
     }
 
 }
