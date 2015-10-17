@@ -8,13 +8,34 @@
       <enum NativeValue="BT_FAILURE" Value="BT_FAILURE" DisplayName="BT_FAILURE" Desc="BT_FAILURE" />
       <enum NativeValue="BT_RUNNING" Value="BT_RUNNING" DisplayName="BT_RUNNING" Desc="BT_RUNNING" />
     </enumtype>
+    <enumtype Type="Player::State" DisplayName="State" Desc="State">
+      <enum NativeValue="Idle" Value="Idle" DisplayName="Idle" Desc="Idle" />
+      <enum NativeValue="Run" Value="Run" DisplayName="Run" Desc="Run" />
+      <enum NativeValue="Attack" Value="Attack" DisplayName="Attack" Desc="Attack" />
+      <enum NativeValue="Hited" Value="Hited" DisplayName="Hited" Desc="Hited" />
+      <enum NativeValue="Skill" Value="Skill" DisplayName="Skill" Desc="Skill" />
+    </enumtype>
   </types>
   <agents>
     <agent classfullname="behaviac::Agent" inherited="true" DisplayName="" Desc="" Namespace="behaviac" />
     <agent classfullname="GameActor" base="behaviac::Agent" DisplayName="GameActor" Desc="GameActor -&gt; Agent" />
+    <agent classfullname="AvatarAttacker" base="Player" DisplayName="AvatarAttacker" Desc="AvatarAttacker -&gt; Player">
+      <Method Name="avatarAttack" DisplayName="" Desc="" ReturnType="behaviac::EBTStatus" Class="AvatarAttacker" Public="true" />
+    </agent>
     <agent classfullname="GameManager" base="behaviac::Agent" DisplayName="GameManager" Desc="GameManager -&gt; Agent" />
     <agent classfullname="Player" base="GameActor" DisplayName="Player" Desc="Player -&gt; GameActor">
+      <Member Name="state" DisplayName="" Desc="" Type="Player::State" Class="Player" Public="true" />
+      <Member Name="crickTime" DisplayName="" Desc="" Type="float" Class="Player" Public="true" />
+      <Member Name="hitedTime" DisplayName="" Desc="" Type="float" Class="Player" Public="true" />
       <Method Name="testBT" DisplayName="" Desc="" ReturnType="behaviac::EBTStatus" Class="Player" Public="true" />
+      <Method Name="attack" DisplayName="" Desc="" ReturnType="behaviac::EBTStatus" Class="Player" Public="true" />
+      <Method Name="isEnemyInRange" DisplayName="" Desc="" ReturnType="bool" Class="Player" Public="true" />
+      <Method Name="moveToTarget" DisplayName="" Desc="" ReturnType="behaviac::EBTStatus" Class="Player" Public="true" />
+      <Method Name="keepCrickTime" DisplayName="" Desc="" ReturnType="float" Class="Player" Public="true" />
+    </agent>
+    <agent classfullname="TeleportAttacker" base="Player" DisplayName="TeleportAttacker" Desc="TeleportAttacker -&gt; Player">
+      <Method Name="teleport" DisplayName="" Desc="" ReturnType="behaviac::EBTStatus" Class="TeleportAttacker" Public="true" />
+      <Method Name="isEnemyStartAttackAct" DisplayName="" Desc="" ReturnType="bool" Class="TeleportAttacker" Public="true" />
     </agent>
   </agents>
   <instances>

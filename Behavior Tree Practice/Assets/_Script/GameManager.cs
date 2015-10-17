@@ -7,16 +7,28 @@ using System.Collections.Generic;
 [behaviac.TypeMetaInfo("GameManager", "GameManager -> Agent")]
 public class GameManager : behaviac.Agent
 {
+    static GameManager _instance;
+
+    public static GameManager instance
+    {
+        get { return _instance; }
+    }
+
 
     protected GameObject mGo;
-    protected RectTransform mTrans;
+    protected Transform mTrans;
 
     public GameObject cachedGameObject { get { if (mGo == null) mGo = gameObject; return mGo; } }
 
-    public RectTransform cachedTransform { get { if (mTrans == null) mTrans = transform as RectTransform; return mTrans; } }
+    public Transform cachedTransform { get { if (mTrans == null) mTrans = transform as Transform; return mTrans; } }
 
 
     private List<Player> mPlayerList = new List<Player>();
+
+    public List<Player> PlayerList
+    {
+        get { return mPlayerList; }
+    }
 
     public static string WorkspaceExportedPath
     {
@@ -66,6 +78,8 @@ public class GameManager : behaviac.Agent
     // Use this for initialization
     void Awake()
     {
+        _instance = this;
+
         BehaviacSystem.instance.init();
 
         //find and add player
@@ -74,7 +88,9 @@ public class GameManager : behaviac.Agent
 
         for (int i = 0, max = mPlayerList.Count; i < max; i++)
         {
-            mPlayerList[i].init();
+            Player p = mPlayerList[i];
+            if(p.enabled)
+                p.init();
         }
     }
 

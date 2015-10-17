@@ -1,4 +1,4 @@
-﻿
+
 --battle and behaviour tree-----------------------------
 >>behaviour tree base knowledge understand							-OVER
 https://en.wikipedia.org/wiki/Behavior_Trees
@@ -673,18 +673,20 @@ BTSequence : BTNode
 }
 
 
-{
-	
-}
-
 ---------------------------------------------------
 
 >>according to TencentOpen/behaviac implement self Behavior Tree System-----------
 
->understand all node
->design BT
->decide behavior node
->implement load xml
+>understand all node										-OVER
+>design BT                                                  -OVER
+>decide behavior node                                       -All copy
+>implement load xml                                         -Just copy
+>find model:
+--Cleaver Warrior		5
+--Adventurer Alice		4
+--AlienCreaturePack		4
+--ALIEN SPECIAL FORCES PSHYCHIC		4
+
 
 
 >>project design-------------------------------------

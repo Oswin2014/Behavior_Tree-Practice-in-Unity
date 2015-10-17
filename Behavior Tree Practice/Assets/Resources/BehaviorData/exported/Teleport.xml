@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--EXPORTED BY TOOL, DON'T MODIFY IT!-->
+<!--Source File: Teleport.xml-->
+<behavior name="Teleport" agenttype="TeleportAttacker" version="1">
+  <node class="DecoratorLoop" version="1" id="9">
+    <property Count="const int -1" />
+    <property DecorateWhenChildEnds="true" />
+    <node class="Selector" version="1" id="0">
+      <node class="Condition" version="1" id="3">
+        <property Operator="Equal" />
+        <property Opl="Player::State Self.Player::state" />
+        <property Opr="const Player::State Hited" />
+      </node>
+      <node class="Selector" version="1" id="2">
+        <attachment class="Predicate" id="13">
+          <property BinaryOperator="And" />
+          <property Operator="Equal" />
+          <property Opl="Self.Player::isEnemyInRange()" />
+          <property Opr="const bool true" />
+        </attachment>
+        <node class="Action" version="1" id="14">
+          <property Method="Self.TeleportAttacker::teleport()" />
+          <property PreconditionFailResult="BT_FAILURE" />
+          <property ResultOption="BT_INVALID" />
+          <attachment class="Predicate" id="15">
+            <property BinaryOperator="And" />
+            <property Operator="Equal" />
+            <property Opl="Self.TeleportAttacker::isEnemyStartAttackAct()" />
+            <property Opr="const bool true" />
+          </attachment>
+        </node>
+        <node class="Action" version="1" id="5">
+          <property Method="Self.Player::attack()" />
+          <property PreconditionFailResult="BT_FAILURE" />
+          <property ResultOption="BT_INVALID" />
+        </node>
+      </node>
+      <node class="Selector" version="1" id="11">
+        <node class="Action" version="1" id="8">
+          <property Method="Self.TeleportAttacker::teleport()" />
+          <property PreconditionFailResult="BT_FAILURE" />
+          <property ResultOption="BT_INVALID" />
+        </node>
+        <node class="Action" version="1" id="1">
+          <property Method="Self.Player::moveToTarget()" />
+          <property PreconditionFailResult="BT_FAILURE" />
+          <property ResultOption="BT_INVALID" />
+        </node>
+      </node>
+    </node>
+  </node>
+</behavior>
