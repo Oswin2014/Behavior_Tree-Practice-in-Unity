@@ -1064,6 +1064,7 @@ namespace behaviac
 
             string fullPath = Workspace.WorkspaceExportPath;
             fullPath += relativePath;
+            Debug.Log("---------------------------------" + fullPath);
             
             EFileFormat f = Workspace.FileFormat;
 

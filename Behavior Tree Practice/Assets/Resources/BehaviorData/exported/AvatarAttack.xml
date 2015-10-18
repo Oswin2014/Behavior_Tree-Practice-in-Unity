@@ -11,22 +11,31 @@
         <property Opl="Player::State Self.Player::state" />
         <property Opr="const Player::State Hited" />
       </node>
-      <node class="Selector" version="1" id="2">
-        <attachment class="Predicate" id="1">
-          <property BinaryOperator="And" />
-          <property Operator="Equal" />
-          <property Opl="Self.Player::isEnemyInRange()" />
-          <property Opr="const bool true" />
-        </attachment>
-        <node class="Action" version="1" id="4">
-          <property Method="Self.AvatarAttacker::avatarAttack()" />
+      <node class="DecoratorNot" version="1" id="10">
+        <property DecorateWhenChildEnds="false" />
+        <node class="Action" version="1" id="7">
+          <property Method="Self.Player::rotateToTarget()" />
           <property PreconditionFailResult="BT_FAILURE" />
           <property ResultOption="BT_INVALID" />
         </node>
-        <node class="Action" version="1" id="5">
-          <property Method="Self.Player::attack()" />
-          <property PreconditionFailResult="BT_FAILURE" />
-          <property ResultOption="BT_INVALID" />
+      </node>
+      <node class="Sequence" version="1" id="1">
+        <node class="Condition" version="1" id="6">
+          <property Operator="Equal" />
+          <property Opl="Self.Player::isEnemyInRange()" />
+          <property Opr="const bool true" />
+        </node>
+        <node class="Selector" version="1" id="2">
+          <node class="Action" version="1" id="4">
+            <property Method="Self.AvatarAttacker::avatarAttack()" />
+            <property PreconditionFailResult="BT_FAILURE" />
+            <property ResultOption="BT_INVALID" />
+          </node>
+          <node class="Action" version="1" id="5">
+            <property Method="Self.Player::attack()" />
+            <property PreconditionFailResult="BT_FAILURE" />
+            <property ResultOption="BT_INVALID" />
+          </node>
         </node>
       </node>
       <node class="Action" version="1" id="8">

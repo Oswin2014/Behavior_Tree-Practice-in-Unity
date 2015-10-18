@@ -32,6 +32,7 @@
       <Method Name="isEnemyInRange" DisplayName="" Desc="" ReturnType="bool" Class="Player" Public="true" />
       <Method Name="moveToTarget" DisplayName="" Desc="" ReturnType="behaviac::EBTStatus" Class="Player" Public="true" />
       <Method Name="keepCrickTime" DisplayName="" Desc="" ReturnType="float" Class="Player" Public="true" />
+      <Method Name="rotateToTarget" DisplayName="" Desc="" ReturnType="behaviac::EBTStatus" Class="Player" Public="true" />
     </agent>
     <agent classfullname="TeleportAttacker" base="Player" DisplayName="TeleportAttacker" Desc="TeleportAttacker -&gt; Player">
       <Method Name="teleport" DisplayName="" Desc="" ReturnType="behaviac::EBTStatus" Class="TeleportAttacker" Public="true" />

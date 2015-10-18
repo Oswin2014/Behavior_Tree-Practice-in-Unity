@@ -38,9 +38,9 @@ public class BehaviacSystem
 				//register names
                 behaviac.Agent.RegisterName<GameManager>("GameManager");
 
-                string metaExportPath = GameManager.WorkspacePath + "/xmlmeta/BTPracticeMeta.xml";
-				behaviac.Workspace.ExportMetas (metaExportPath);
-				behaviac.Debug.Log ("Behaviac meta data export over.");
+                //string metaExportPath = GameManager.WorkspacePath + "/xmlmeta/BTPracticeMeta.xml";
+                //behaviac.Workspace.ExportMetas (metaExportPath);
+                //behaviac.Debug.Log ("Behaviac meta data export over.");
 
 				//behaviac.Workspace.RespondToBreakHandler += RespondToBreak;
 

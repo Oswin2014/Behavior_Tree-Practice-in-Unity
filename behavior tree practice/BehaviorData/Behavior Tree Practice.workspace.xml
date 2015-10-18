@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<workspace name="Behavior Tree Practice" xmlmetafolder="..\Assets\BTWorkspace\xmlmeta" folder="behaviors" export="exported">
+<workspace name="Behavior Tree Practice" xmlmetafolder="..\Assets\BTWorkspace\xmlmeta" folder="behaviors" export="..\Assets\Resources\BehaviorData\exported">
   <xmlmeta>BTPracticeMeta.xml</xmlmeta>
   <export>
     <bson>

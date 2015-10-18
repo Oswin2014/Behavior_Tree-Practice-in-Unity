@@ -18,6 +18,8 @@ public class Weapon : MonoBehaviour {
         if (null != target)
         {
             target.hited();
+            if(null != self)
+                self.damage();
         }
 
     }

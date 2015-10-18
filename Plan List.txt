@@ -687,6 +687,9 @@ BTSequence : BTNode
 --AlienCreaturePack		4
 --ALIEN SPECIAL FORCES PSHYCHIC		4
 
+>avatarAttack cd                                            -OVER
+>target not at forward, change animation to idle, after change, rotate dir		-OVER
+>alpha shader                                               -OVER
 
 
 >>project design-------------------------------------
